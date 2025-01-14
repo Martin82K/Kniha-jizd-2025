@@ -1,4 +1,10 @@
-# Kniha Jízd
+# Kniha Jízd 2025
+
+<p align="center">
+  <img src="static/img/App_logo.png" alt="Kniha Jízd Logo" width="400">
+</p>
+
+<h1 align="center">Kniha Jízd 2025</h1>
 
 Webová aplikace pro správu knihy jízd s podporou více vozidel a uživatelů. Aplikace umožňuje sledovat jízdy, tankování a statistiky pro každé vozidlo.
 
@@ -117,3 +123,15 @@ Tato aplikace je poskytována pod licencí MIT. Můžete ji volně používat, u
 
 ## Podpora
 V případě problémů nebo dotazů vytvořte issue v tomto repozitáři.
+
+---
+
+<p align="center">
+  <img src="static/img/MK_logo.png" alt="MK Logo" width="100">
+</p>
+
+<p align="center">
+  <strong>Děkuji za využívání aplikace Kniha Jízd 2025</strong><br>
+  Vytvořil Martin Kalkuš 2025<br>
+  Všechna práva vyhrazena
+</p>

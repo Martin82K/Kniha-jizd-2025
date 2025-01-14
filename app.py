@@ -19,6 +19,10 @@ app.config['SECRET_KEY'] = 'your-secret-key-here'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///kniha_jizd_v2.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Vytvoření adresáře pro exporty
+if not os.path.exists(os.path.join(app.static_folder, 'exports')):
+    os.makedirs(os.path.join(app.static_folder, 'exports'), exist_ok=True)
+
 from models import db, Jizda, Tankovani, Vozidlo, User
 
 # Inicializace databáze a login manageru
@@ -527,13 +531,22 @@ def export_pdf(rok, mesic):
     cesta_k_souboru = os.path.join(app.static_folder, 'exports', nazev_souboru)
     os.makedirs(os.path.dirname(cesta_k_souboru), exist_ok=True)
     
+    # Registrace fontu
+    pdfmetrics.registerFont(TTFont('Arial', 'C:/Windows/Fonts/arial.ttf'))
+    pdfmetrics.registerFont(TTFont('ArialBold', 'C:/Windows/Fonts/arialbd.ttf'))
+    
     doc = SimpleDocTemplate(cesta_k_souboru, pagesize=A4)
     elements = []
     
     # Nadpis
     styles = getSampleStyleSheet()
-    elements.append(Paragraph(f'Kniha jízd - {vozidlo.nazev} ({vozidlo.spz})', styles['Title']))
-    elements.append(Paragraph(f'Období: {mesic}/{rok}', styles['Heading1']))
+    title_style = styles['Title']
+    title_style.fontName = 'ArialBold'
+    heading_style = styles['Heading1']
+    heading_style.fontName = 'Arial'
+    
+    elements.append(Paragraph(f'Kniha jízd - {vozidlo.nazev} ({vozidlo.spz})', title_style))
+    elements.append(Paragraph(f'Období: {mesic}/{rok}', heading_style))
     
     # Data pro tabulku
     data = [['Datum', 'Řidič', 'Odkud', 'Kam', 'Km', 'Účel jízdy', 'Stav km']]
@@ -560,12 +573,12 @@ def export_pdf(rok, mesic):
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, 0), (-1, 0), 'ArialBold'),
         ('FONTSIZE', (0, 0), (-1, 0), 14),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
         ('BACKGROUND', (0, -1), (-1, -1), colors.lightgrey),
         ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
-        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTNAME', (0, 1), (-1, -1), 'Arial'),
         ('FONTSIZE', (0, 1), (-1, -1), 12),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('GRID', (0, 0), (-1, -1), 1, colors.black)
@@ -606,25 +619,9 @@ def odeslat_email(rok, mesic):
 def utility_processor():
     return {'now': datetime.now()}
 
-# Vytvoření nové databáze
+# Inicializace databáze - vytvoření pouze pokud neexistuje
 with app.app_context():
-    db.drop_all()  # Smazání všech tabulek
-    db.create_all()  # Vytvoření nových tabulek
-    
-    # Vytvoření admin účtu
-    from models import User
-    admin = User(
-        username='admin',
-        email='admin@example.com',
-        max_vozidel=999,
-        is_admin=True,
-        dark_mode=False
-    )
-    admin.set_password('admin')
-    
-    db.session.add(admin)
-    db.session.commit()
-    print('Databáze byla úspěšně vytvořena včetně admin účtu')
+    db.create_all()
 
 if __name__ == '__main__':
     app.run(debug=True)
