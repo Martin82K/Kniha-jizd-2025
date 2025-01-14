@@ -18,6 +18,7 @@
                             <th>Email</th>
                             <th>Max. vozidel</th>
                             <th>Admin</th>
+                            <th>Platnost do</th>
                             <th>Vytvořeno</th>
                             <th>Akce</th>
                         </tr>
@@ -36,20 +37,34 @@
                                 <span class="badge bg-secondary">Ne</span>
                                 {% endif %}
                             </td>
+                            <td>
+                                {% if user.is_account_valid() %}
+                                <span class="badge bg-success">{{ user.platnost_do.strftime('%d.%m.%Y') }}</span>
+                                {% else %}
+                                <span class="badge bg-danger">Vypršelo {{ user.platnost_do.strftime('%d.%m.%Y') }}</span>
+                                {% endif %}
+                            </td>
                             <td>{{ user.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
                             <td>
-                                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editUser{{ user.id }}">
-                                    Upravit
-                                </button>
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editUser{{ user.id }}">
+                                        Upravit
+                                    </button>
+                                    {% if user.id != current_user.id %}
+                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteUser{{ user.id }}">
+                                        Smazat
+                                    </button>
+                                    {% endif %}
+                                </div>
                             </td>
                         </tr>
                         
                         <!-- Modal pro úpravu uživatele -->
-                        <div class="modal fade" id="editUser{{ user.id }}" tabindex="-1" aria-labelledby="editUserLabel{{ user.id }}" aria-hidden="true">
+                        <div class="modal fade" id="editUser{{ user.id }}" tabindex="-1">
                             <div class="modal-dialog">
                                 <div class="modal-content">
                                     <div class="modal-header">
-                                        <h5 class="modal-title" id="editUserLabel{{ user.id }}">Upravit uživatele {{ user.username }}</h5>
+                                        <h5 class="modal-title">Upravit uživatele {{ user.username }}</h5>
                                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                     </div>
                                     <form action="{{ url_for('upravit_uzivatele', id=user.id) }}" method="POST">
@@ -58,6 +73,11 @@
                                                 <label for="max_vozidel{{ user.id }}" class="form-label">Maximální počet vozidel</label>
                                                 <input type="number" class="form-control" id="max_vozidel{{ user.id }}" name="max_vozidel" 
                                                        value="{{ user.max_vozidel }}" min="1" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="platnost_do{{ user.id }}" class="form-label">Platnost do</label>
+                                                <input type="date" class="form-control" id="platnost_do{{ user.id }}" name="platnost_do" 
+                                                       value="{{ user.platnost_do.strftime('%Y-%m-%d') }}" required>
                                             </div>
                                             <div class="mb-3">
                                                 <div class="form-check">
@@ -75,6 +95,32 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Modal pro smazání uživatele -->
+                        {% if user.id != current_user.id %}
+                        <div class="modal fade" id="deleteUser{{ user.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Smazat uživatele</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>Opravdu chcete smazat uživatele <strong>{{ user.username }}</strong>?</p>
+                                        <p class="text-danger">
+                                            Tato akce je nevratná. Budou smazána všechna vozidla, jízdy a tankování tohoto uživatele.
+                                        </p>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zrušit</button>
+                                        <form action="{{ url_for('smazat_uzivatele', id=user.id) }}" method="POST" style="display: inline;">
+                                            <button type="submit" class="btn btn-danger">Smazat</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                         {% endfor %}
                     </tbody>
                 </table>

@@ -8,6 +8,9 @@
 
 Webová aplikace pro správu knihy jízd s podporou více vozidel a uživatelů. Aplikace umožňuje sledovat jízdy, tankování a statistiky pro každé vozidlo.
 
+## Popis projektu
+Tento projekt slouží k evidenci jízd a správy dat souvisejících s jízdami v roce 2025.
+
 ## Funkce
 
 ### Správa vozidel
@@ -39,12 +42,28 @@ Webová aplikace pro správu knihy jízd s podporou více vozidel a uživatelů.
 - Přehledné tabulky a grafy
 - Intuitivní ovládání
 
-## Technické požadavky
+## Instalace
+Pro instalaci potřebných závislostí použijte následující příkaz:
 
-### Instalace závislostí
 ```bash
 pip install -r requirements.txt
 ```
+
+## Použití
+Po úspěšné instalaci můžete projekt spustit pomocí:
+
+```bash
+python app.py
+```
+
+## Nové funkce
+- Přidání nového typu jízdy.
+- Možnost přihlášení uživatelů.
+
+## Poznámky
+Aktuální čas je: 2025-01-14T20:54:09+01:00. Tento čas je považován za nejnovější zdroj pravdy pro časové údaje v projektu.
+
+## Technické požadavky
 
 ### Požadované balíčky
 - Flask

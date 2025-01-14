@@ -10,18 +10,23 @@ class User(UserMixin, db.Model):
     __tablename__ = 'users'
     id = db.Column(Integer, primary_key=True)
     username = db.Column(String(80), unique=True, nullable=False)
+    prijmeni = db.Column(String(80), nullable=False)  # Nové pole pro příjmení
     email = db.Column(String(120), unique=True, nullable=False)
     password_hash = db.Column(String(128))
     max_vozidel = db.Column(Integer, default=1)  # Maximální počet vozidel
     created_at = db.Column(DateTime, default=datetime.utcnow)
+    platnost_do = db.Column(DateTime, nullable=False)  # Nové pole pro platnost účtu
     is_admin = db.Column(Boolean, default=False)
-    dark_mode = db.Column(Boolean, default=False)  # Preference dark mode
+    dark_mode = db.Column(Boolean, default=True)  # Preference dark mode
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
         
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+    
+    def is_account_valid(self):
+        return datetime.utcnow() <= self.platnost_do
 
 class Vozidlo(db.Model):
     __tablename__ = 'vozidla'
@@ -46,8 +51,9 @@ class Jizda(db.Model):
     misto_odjezdu = db.Column(String(200), nullable=False)
     misto_prijezdu = db.Column(String(200), nullable=False)
     pocet_km = db.Column(Float, nullable=False)
-    ucel_jizdy = db.Column(Text, nullable=False)
+    ucel_jizdy = db.Column(String(200), nullable=False)
     stav_tachometru = db.Column(Integer, nullable=False)
+    typ_jizdy = db.Column(String(20), nullable=False, default='pracovní')  # Nový sloupec pro typ jízdy
 
 class Tankovani(db.Model):
     __tablename__ = 'tankovani'

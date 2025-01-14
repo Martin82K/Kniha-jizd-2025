@@ -19,7 +19,15 @@
                     <tbody>
                         <tr>
                             <th>Celkem najeto:</th>
-                            <td>{{ stat.celkem_km }} km</td>
+                            <td>{{ stat.celkem_km_soukroma + stat.celkem_km_pracovni }} km</td>
+                        </tr>
+                        <tr>
+                            <th>Soukromé km:</th>
+                            <td>{{ stat.celkem_km_soukroma }} km</td>
+                        </tr>
+                        <tr>
+                            <th>Pracovní km:</th>
+                            <td>{{ stat.celkem_km_pracovni }} km</td>
                         </tr>
                         <tr>
                             <th>Celkové náklady na PHM:</th>

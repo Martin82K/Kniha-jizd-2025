@@ -1,0 +1,14 @@
+# Ignorování virtuálního prostředí
+.venv/
+
+# Ignorování souborů a adresářů pro Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+
+# Ignorování souborů pro IDE
+.vscode/
+.idea/

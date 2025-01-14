@@ -1,36 +1,44 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, send_file
-from datetime import datetime
+from datetime import datetime, timedelta
+import calendar
 import os
-from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, jsonify
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from functools import wraps
+from models import db, User, Vozidlo, Jizda, Tankovani
+from flask_migrate import Migrate
+import pandas as pd
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-import calendar
-from webbrowser import open as webbrowser_open
-from urllib.parse import quote
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER
+from functools import wraps
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-here'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///kniha_jizd_v2.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///kniha_jizd_v3.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = 'tvuj-tajny-klic-zde'
+app.config['SESSION_PROTECTION'] = "strong"
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=5)  # Nastavení časového limitu na 5 minut
+app.config['REMEMBER_COOKIE_DURATION'] = None  # Vypne "remember me" funkcionalitu
+app.config['SESSION_PERMANENT'] = False  # Session cookie zmizí při zavření prohlížeče
 
-# Vytvoření adresáře pro exporty
-if not os.path.exists(os.path.join(app.static_folder, 'exports')):
-    os.makedirs(os.path.join(app.static_folder, 'exports'), exist_ok=True)
+# Nastavení výchozího dark mode
+@app.before_request
+def before_request():
+    if 'dark_mode' not in session:
+        session['dark_mode'] = True
 
-from models import db, Jizda, Tankovani, Vozidlo, User
-
-# Inicializace databáze a login manageru
 db.init_app(app)
+migrate = Migrate(app, db)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Pro přístup k této stránce se musíte přihlásit.'
+login_manager.login_message_category = 'info'
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -51,17 +59,21 @@ def login():
         return redirect(url_for('index'))
     
     if request.method == 'POST':
-        user = User.query.filter_by(username=request.form['username']).first()
+        user = User.query.filter_by(username=request.form['username'].lower()).first()
         if user and user.check_password(request.form['password']):
-            # Pokud byl dark mode zapnutý před přihlášením, nastavíme ho uživateli
+            if not user.is_account_valid():
+                flash('Uživateli vypršel přístup', 'danger')
+                return redirect(url_for('login'))
+            # Nastavení session na browser session (vyprší při zavření prohlížeče)
+            session.permanent = False
+            login_user(user)
             if session.get('dark_mode', False):
                 user.dark_mode = True
                 db.session.commit()
-            login_user(user, remember=bool(request.form.get('remember')))
             next_page = request.args.get('next')
             flash('Přihlášení bylo úspěšné!', 'success')
             return redirect(next_page or url_for('index'))
-        flash('Nesprávné přihlašovací údaje.', 'danger')
+        flash('Nesprávné přihlašovací údaje', 'danger')
     return render_template('login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -70,21 +82,27 @@ def register():
         return redirect(url_for('index'))
     
     if request.method == 'POST':
-        if request.form['password'] != request.form['password2']:
-            flash('Hesla se neshodují.', 'danger')
+        prijmeni = request.form['prijmeni']
+        username = prijmeni.lower()
+        email = request.form['email']
+        
+        if User.query.filter_by(username=username).first():
+            flash('Toto uživatelské jméno již existuje', 'danger')
             return redirect(url_for('register'))
         
-        if User.query.filter_by(username=request.form['username']).first():
-            flash('Toto uživatelské jméno je již obsazené.', 'danger')
+        if User.query.filter_by(email=email).first():
+            flash('Tento email již existuje', 'danger')
             return redirect(url_for('register'))
-            
-        if User.query.filter_by(email=request.form['email']).first():
-            flash('Tento email je již zaregistrován.', 'danger')
-            return redirect(url_for('register'))
+        
+        # Nastavení platnosti na 1 rok od registrace
+        platnost_do = datetime.utcnow().replace(year=datetime.utcnow().year + 1)
         
         user = User(
-            username=request.form['username'],
-            email=request.form['email']
+            username=username,
+            prijmeni=prijmeni,
+            email=email,
+            max_vozidel=1,
+            platnost_do=platnost_do
         )
         user.set_password(request.form['password'])
         
@@ -96,7 +114,7 @@ def register():
         db.session.add(user)
         db.session.commit()
         
-        flash('Registrace byla úspěšná! Nyní se můžete přihlásit.', 'success')
+        flash('Registrace byla úspěšná, nyní se můžete přihlásit', 'success')
         return redirect(url_for('login'))
     
     return render_template('register.html')
@@ -119,11 +137,79 @@ def admin():
 @login_required
 @admin_required
 def upravit_uzivatele(id):
+    if not current_user.is_authenticated or not current_user.is_admin:
+        abort(403)
+    
     user = User.query.get_or_404(id)
     user.max_vozidel = int(request.form['max_vozidel'])
     user.is_admin = bool(request.form.get('is_admin'))
+    
+    # Převod data z formuláře na datetime
+    platnost_do_str = request.form.get('platnost_do')
+    if platnost_do_str:
+        try:
+            # Nastavení času na konec dne (23:59:59)
+            platnost_do = datetime.strptime(platnost_do_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+            user.platnost_do = platnost_do
+        except ValueError:
+            flash('Neplatný formát data', 'danger')
+            return redirect(url_for('admin'))
+    
     db.session.commit()
-    flash('Uživatel byl úspěšně upraven.', 'success')
+    flash('Uživatel byl úspěšně upraven', 'success')
+    return redirect(url_for('admin'))
+
+@app.route('/admin/smazat_uzivatele/<int:id>', methods=['POST'])
+@login_required
+@admin_required
+def smazat_uzivatele(id):
+    if current_user.id == id:
+        flash('Nemůžete smazat sám sebe.', 'danger')
+        return redirect(url_for('admin'))
+    
+    user = User.query.get_or_404(id)
+    # Nejprve smažeme všechna vozidla uživatele
+    for vozidlo in user.vozidla:
+        # Smažeme všechny jízdy a tankování vozidla
+        Jizda.query.filter_by(vozidlo_id=vozidlo.id).delete()
+        Tankovani.query.filter_by(vozidlo_id=vozidlo.id).delete()
+        db.session.delete(vozidlo)
+    
+    db.session.delete(user)
+    db.session.commit()
+    flash('Uživatel byl úspěšně smazán.', 'success')
+    return redirect(url_for('admin'))
+
+@app.route('/admin/novy_uzivatel', methods=['POST'])
+@login_required
+@admin_required
+def novy_uzivatel():
+    username = request.form['username']
+    email = request.form['email']
+    password = request.form['password']
+    max_vozidel = int(request.form['max_vozidel'])
+    is_admin = bool(request.form.get('is_admin'))
+    
+    if User.query.filter_by(username=username).first():
+        flash('Uživatelské jméno již existuje.', 'danger')
+        return redirect(url_for('admin'))
+    
+    if User.query.filter_by(email=email).first():
+        flash('Email již existuje.', 'danger')
+        return redirect(url_for('admin'))
+    
+    new_user = User(
+        username=username,
+        email=email,
+        max_vozidel=max_vozidel,
+        is_admin=is_admin,
+        dark_mode=False
+    )
+    new_user.set_password(password)
+    
+    db.session.add(new_user)
+    db.session.commit()
+    flash('Nový uživatel byl úspěšně vytvořen.', 'success')
     return redirect(url_for('admin'))
 
 @app.route('/')
@@ -251,6 +337,11 @@ def nova_jizda():
         misto_prijezdu = request.form.get('misto_prijezdu')
         pocet_km = request.form.get('pocet_km', type=float)
         ucel_jizdy = request.form.get('ucel_jizdy')
+        typ_jizdy = request.form.get('typ_jizdy')  # Získání typu jízdy ze vstupu
+        
+        if typ_jizdy not in ['soukromá', 'pracovní']:
+            flash('Neplatný typ jízdy', 'danger')
+            return redirect(url_for('nova_jizda'))
         
         if not all([datum, ridic, misto_odjezdu, misto_prijezdu, pocet_km, ucel_jizdy]):
             flash('Všechna pole jsou povinná', 'danger')
@@ -277,7 +368,8 @@ def nova_jizda():
             misto_prijezdu=misto_prijezdu,
             pocet_km=pocet_km,
             ucel_jizdy=ucel_jizdy,
-            stav_tachometru=novy_stav_tachometru
+            stav_tachometru=novy_stav_tachometru,
+            typ_jizdy=typ_jizdy  # Uložení typu jízdy
         )
         
         # Aktualizace stavu tachometru vozidla
@@ -353,7 +445,8 @@ def statistiky():
     
     for vozidlo in vozidla:
         # Celkový počet kilometrů
-        celkem_km = db.session.query(db.func.sum(Jizda.pocet_km)).filter_by(vozidlo_id=vozidlo.id).scalar() or 0
+        celkem_km_soukroma = db.session.query(db.func.sum(Jizda.pocet_km)).filter_by(vozidlo_id=vozidlo.id, typ_jizdy='soukromá').scalar() or 0
+        celkem_km_pracovni = db.session.query(db.func.sum(Jizda.pocet_km)).filter_by(vozidlo_id=vozidlo.id, typ_jizdy='pracovní').scalar() or 0
         
         # Celkové náklady na PHM
         celkem_phm = db.session.query(db.func.sum(Tankovani.celkova_cena)).filter_by(vozidlo_id=vozidlo.id).scalar() or 0
@@ -374,10 +467,11 @@ def statistiky():
         statistiky_vozidel.append({
             'vozidlo': vozidlo.nazev,
             'spz': vozidlo.spz,
-            'celkem_km': round(celkem_km, 1),
+            'celkem_km_soukroma': round(celkem_km_soukroma, 1),
+            'celkem_km_pracovni': round(celkem_km_pracovni, 1),
             'celkem_phm': round(celkem_phm, 2),
             'prumerna_spotreba': prumerna_spotreba,
-            'naklady_na_km': round(celkem_phm / celkem_km, 2) if celkem_km > 0 else 0
+            'naklady_na_km': round(celkem_phm / (celkem_km_soukroma + celkem_km_pracovni), 2) if (celkem_km_soukroma + celkem_km_pracovni) > 0 else 0
         })
     
     return render_template('statistiky.html', statistiky=statistiky_vozidel)
@@ -447,13 +541,12 @@ def upravit_vozidlo(id):
     return render_template('upravit_vozidlo.html', vozidlo=vozidlo)
 
 @app.route('/toggle_theme', methods=['POST'])
+@login_required
 def toggle_theme():
-    if current_user.is_authenticated:
-        current_user.dark_mode = not current_user.dark_mode
-        db.session.commit()
-    else:
-        session['dark_mode'] = not session.get('dark_mode', False)
-    return jsonify({'success': True})
+    # Změna režimu pro přihlášeného uživatele
+    current_user.dark_mode = not current_user.dark_mode
+    db.session.commit()
+    return jsonify({'success': True, 'dark_mode': current_user.dark_mode})
 
 @app.route('/jizdy_mesic/<int:rok>/<int:mesic>')
 @login_required
@@ -463,7 +556,7 @@ def jizdy_mesic(rok, mesic):
         flash('Neplatný měsíc nebo rok', 'danger')
         return redirect(url_for('index'))
     
-    # Získání prvního a posledního dne v měsíci
+    # Získání prvého a posledního dne v měsíci
     _, posledni_den = calendar.monthrange(rok, mesic)
     zacatek_mesice = datetime(rok, mesic, 1)
     konec_mesice = datetime(rok, mesic, posledni_den, 23, 59, 59)
@@ -505,7 +598,6 @@ def jizdy_mesic(rok, mesic):
 @app.route('/export_pdf/<int:rok>/<int:mesic>')
 @login_required
 def export_pdf(rok, mesic):
-    # Získání dat stejně jako v jizdy_mesic
     aktivni_vozidlo_id = session.get('aktivni_vozidlo_id')
     if not aktivni_vozidlo_id:
         flash('Nejprve vyberte aktivní vozidlo', 'danger')
@@ -526,66 +618,49 @@ def export_pdf(rok, mesic):
         Jizda.datum <= konec_mesice
     ).order_by(Jizda.datum).all()
     
-    # Vytvoření PDF
-    nazev_souboru = f'kniha_jizd_{vozidlo.spz}_{rok}_{mesic:02d}.pdf'
-    cesta_k_souboru = os.path.join(app.static_folder, 'exports', nazev_souboru)
-    os.makedirs(os.path.dirname(cesta_k_souboru), exist_ok=True)
-    
-    # Registrace fontu
-    pdfmetrics.registerFont(TTFont('Arial', 'C:/Windows/Fonts/arial.ttf'))
-    pdfmetrics.registerFont(TTFont('ArialBold', 'C:/Windows/Fonts/arialbd.ttf'))
-    
-    doc = SimpleDocTemplate(cesta_k_souboru, pagesize=A4)
-    elements = []
-    
-    # Nadpis
-    styles = getSampleStyleSheet()
-    title_style = styles['Title']
-    title_style.fontName = 'ArialBold'
-    heading_style = styles['Heading1']
-    heading_style.fontName = 'Arial'
-    
-    elements.append(Paragraph(f'Kniha jízd - {vozidlo.nazev} ({vozidlo.spz})', title_style))
-    elements.append(Paragraph(f'Období: {mesic}/{rok}', heading_style))
-    
-    # Data pro tabulku
-    data = [['Datum', 'Řidič', 'Odkud', 'Kam', 'Km', 'Účel jízdy', 'Stav km']]
+    # Výpočet statistik
+    pocatecni_stav = None
+    konecny_stav = None
     celkem_km = 0
+    celkem_sluzebne = 0
+    celkem_soukrome = 0
+    
+    if jizdy:
+        pocatecni_stav = jizdy[0].stav_tachometru - jizdy[0].pocet_km
+        konecny_stav = jizdy[-1].stav_tachometru
+        
+        for jizda in jizdy:
+            if jizda.typ_jizdy == 'služební':
+                celkem_sluzebne += jizda.pocet_km
+            else:
+                celkem_soukrome += jizda.pocet_km
+            celkem_km += jizda.pocet_km
+    
+    # Vytvoření PDF
+    doc = SimpleDocTemplate("kniha_jizd.pdf", pagesize=A4, rightMargin=30,leftMargin=30, topMargin=30,bottomMargin=18)
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name='Justify', alignment=TA_JUSTIFY))
+    styleN = styles["BodyText"]
+    styleN.alignment = TA_JUSTIFY
+    styleH = styles['Heading1']
+    styleH.alignment = TA_CENTER
+    
+    data = []
+    data.append(['Datum', 'Řidič', 'Odkud', 'Kam', 'Km', 'Účel jízdy', 'Stav km', 'Typ jízdy'])
     
     for jizda in jizdy:
-        data.append([
-            jizda.datum.strftime('%d.%m.%Y %H:%M'),
-            jizda.ridic,
-            jizda.misto_odjezdu,
-            jizda.misto_prijezdu,
-            str(jizda.pocet_km),
-            jizda.ucel_jizdy,
-            str(jizda.stav_tachometru)
-        ])
-        celkem_km += jizda.pocet_km
+        data.append([jizda.datum.strftime('%d.%m.%Y %H:%M'), jizda.ridic, jizda.misto_odjezdu, jizda.misto_prijezdu, str(jizda.pocet_km), jizda.ucel_jizdy, str(jizda.stav_tachometru), jizda.typ_jizdy])
     
-    # Přidání součtu kilometrů
-    data.append(['Celkem', '', '', '', str(celkem_km), '', ''])
+    table = Table(data, style=[('GRID', (0,0), (-1,-1), 1, colors.black), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')])
+    elems = []
+    elems.append(Paragraph(f'Kniha jízd - {vozidlo.nazev} ({vozidlo.spz})', styleH))
+    elems.append(Paragraph(f'Období: {mesic}/{rok}', styleN))
+    elems.append(table)
     
-    # Vytvoření tabulky
-    table = Table(data)
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('FONTNAME', (0, 0), (-1, 0), 'ArialBold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 14),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('BACKGROUND', (0, -1), (-1, -1), colors.lightgrey),
-        ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
-        ('FONTNAME', (0, 1), (-1, -1), 'Arial'),
-        ('FONTSIZE', (0, 1), (-1, -1), 12),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('GRID', (0, 0), (-1, -1), 1, colors.black)
-    ]))
+    doc.build(elems)
     
-    elements.append(table)
-    doc.build(elements)
+    nazev_souboru = f'kniha_jizd_{vozidlo.spz}_{rok}_{mesic:02d}.pdf'
+    cesta_k_souboru = os.path.join(app.static_folder, 'exports', nazev_souboru)
     
     return send_file(
         cesta_k_souboru,
@@ -594,26 +669,88 @@ def export_pdf(rok, mesic):
         mimetype='application/pdf'
     )
 
-@app.route('/odeslat_email/<int:rok>/<int:mesic>')
+@app.route('/export_xls/<int:rok>/<int:mesic>')
 @login_required
-def odeslat_email(rok, mesic):
-    # Nejprve vytvoříme PDF
-    response = export_pdf(rok, mesic)
-    if not isinstance(response, tuple):  # Pokud není chyba
-        # Otevřeme výchozího emailového klienta s předvyplněným předmětem a přílohou
-        nazev_souboru = response.headers['Content-Disposition'].split('filename=')[1].strip('"')
-        cesta_k_souboru = os.path.join(app.static_folder, 'exports', nazev_souboru)
-        
-        # Vytvoření mailto odkazu
-        predmet = quote(f'Kniha jízd - {mesic}/{rok}')
-        mailto_url = f'mailto:?subject={predmet}&body=V příloze zasílám knihu jízd.'
-        
-        # Otevření výchozího emailového klienta
-        webbrowser_open(mailto_url)
-        
-        return redirect(url_for('jizdy_mesic', rok=rok, mesic=mesic))
+def export_xls(rok, mesic):
+    aktivni_vozidlo_id = session.get('aktivni_vozidlo_id')
+    if not aktivni_vozidlo_id:
+        flash('Nejprve vyberte aktivní vozidlo', 'danger')
+        return redirect(url_for('vozidla'))
     
-    return response
+    vozidlo = Vozidlo.query.get_or_404(aktivni_vozidlo_id)
+    if vozidlo.user_id != current_user.id:
+        flash('Nemáte oprávnění k tomuto vozidlu', 'danger')
+        return redirect(url_for('index'))
+    
+    _, posledni_den = calendar.monthrange(rok, mesic)
+    zacatek_mesice = datetime(rok, mesic, 1)
+    konec_mesice = datetime(rok, mesic, posledni_den, 23, 59, 59)
+    
+    jizdy = Jizda.query.filter(
+        Jizda.vozidlo_id == aktivni_vozidlo_id,
+        Jizda.datum >= zacatek_mesice,
+        Jizda.datum <= konec_mesice
+    ).order_by(Jizda.datum).all()
+    
+    # Výpočet statistik
+    pocatecni_stav = None
+    konecny_stav = None
+    celkem_km = 0
+    celkem_sluzebne = 0
+    celkem_soukrome = 0
+    
+    if jizdy:
+        pocatecni_stav = jizdy[0].stav_tachometru - jizdy[0].pocet_km
+        konecny_stav = jizdy[-1].stav_tachometru
+        
+        for jizda in jizdy:
+            if jizda.typ_jizdy == 'služební':
+                celkem_sluzebne += jizda.pocet_km
+            else:
+                celkem_soukrome += jizda.pocet_km
+            celkem_km += jizda.pocet_km
+    
+    # Vytvoření statistiky
+    statistika = pd.DataFrame([{
+        'Vozidlo': f"{vozidlo.nazev} ({vozidlo.spz})",
+        'Období': f"{mesic}/{rok}",
+        'Počáteční stav': pocatecni_stav if pocatecni_stav is not None else 0,
+        'Konečný stav': konecny_stav if konecny_stav is not None else 0,
+        'Celkem km': celkem_km,
+        'Služební km': celkem_sluzebne,
+        'Soukromé km': celkem_soukrome
+    }])
+    
+    # Připravit data jízd pro export
+    data = []
+    for jizda in jizdy:
+        data.append({
+            'Datum': jizda.datum.strftime('%d.%m.%Y %H:%M'),
+            'Řidič': jizda.ridic,
+            'Odkud': jizda.misto_odjezdu,
+            'Kam': jizda.misto_prijezdu,
+            'Km': jizda.pocet_km,
+            'Účel jízdy': jizda.ucel_jizdy,
+            'Stav km': jizda.stav_tachometru,
+            'Typ jízdy': jizda.typ_jizdy
+        })
+    
+    # Vytvoření DataFrame a export do XLSX
+    df_jizdy = pd.DataFrame(data)
+    nazev_souboru = f'kniha_jizd_{vozidlo.spz}_{rok}_{mesic:02d}.xlsx'
+    cesta_k_souboru = os.path.join(app.static_folder, 'exports', nazev_souboru)
+    
+    # Export do XLSX s více listy
+    with pd.ExcelWriter(cesta_k_souboru, engine='openpyxl') as writer:
+        statistika.to_excel(writer, sheet_name='Statistika', index=False)
+        df_jizdy.to_excel(writer, sheet_name='Jízdy', index=False)
+    
+    return send_file(
+        cesta_k_souboru,
+        as_attachment=True,
+        download_name=nazev_souboru,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
 
 @app.context_processor
 def utility_processor():
