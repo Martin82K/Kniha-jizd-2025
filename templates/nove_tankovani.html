@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Nové tankování</h4>
+                    {% if aktivni_vozidlo %}
+                    <p class="mb-0">Vozidlo: {{ aktivni_vozidlo.nazev }} ({{ aktivni_vozidlo.spz }})</p>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="datum" class="form-label">Datum</label>
+                                    <input type="date" class="form-control" id="datum" name="datum" required
+                                           value="{{ now.strftime('%Y-%m-%d') }}">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="stav_tachometru" class="form-label">Stav tachometru</label>
+                                    <input type="number" class="form-control" id="stav_tachometru" name="stav_tachometru" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="litru" class="form-label">Počet litrů</label>
+                                    <input type="number" step="0.01" class="form-control" id="litru" name="litru" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="cena_za_litr" class="form-label">Cena za litr</label>
+                                    <input type="number" step="0.01" class="form-control" id="cena_za_litr" name="cena_za_litr" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="celkova_cena" class="form-label">Celková cena</label>
+                                    <input type="number" step="0.01" class="form-control" id="celkova_cena" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="poznamka" class="form-label">Poznámka</label>
+                            <textarea class="form-control" id="poznamka" name="poznamka" rows="2"></textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('index') }}" class="btn btn-secondary">Zpět</a>
+                            <button type="submit" class="btn btn-primary">Uložit tankování</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const litruInput = document.getElementById('litru');
+    const cenaZaLitrInput = document.getElementById('cena_za_litr');
+    const celkovaCenaInput = document.getElementById('celkova_cena');
+
+    function vypocetCelkoveCeny() {
+        const litru = parseFloat(litruInput.value) || 0;
+        const cenaZaLitr = parseFloat(cenaZaLitrInput.value) || 0;
+        celkovaCenaInput.value = (litru * cenaZaLitr).toFixed(2);
+    }
+
+    litruInput.addEventListener('input', vypocetCelkoveCeny);
+    cenaZaLitrInput.addEventListener('input', vypocetCelkoveCeny);
+});
+</script>
+{% endblock %}

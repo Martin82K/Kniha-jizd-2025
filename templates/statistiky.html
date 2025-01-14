@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>Statistiky vozidel</h2>
+    </div>
+</div>
+
+<div class="row">
+    {% for stat in statistiky %}
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">{{ stat.vozidlo }} ({{ stat.spz }})</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tbody>
+                        <tr>
+                            <th>Celkem najeto:</th>
+                            <td>{{ stat.celkem_km }} km</td>
+                        </tr>
+                        <tr>
+                            <th>Celkové náklady na PHM:</th>
+                            <td>{{ stat.celkem_phm }} Kč</td>
+                        </tr>
+                        <tr>
+                            <th>Průměrná spotřeba:</th>
+                            <td>
+                                {% if stat.prumerna_spotreba %}
+                                    {{ stat.prumerna_spotreba }} l/100km
+                                {% else %}
+                                    Nedostatek dat
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Náklady na km:</th>
+                            <td>{{ stat.naklady_na_km }} Kč/km</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Administrace uživatelů</h2>
+    
+    <div class="card mt-4">
+        <div class="card-header">
+            <h4>Seznam uživatelů</h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Uživatelské jméno</th>
+                            <th>Email</th>
+                            <th>Max. vozidel</th>
+                            <th>Admin</th>
+                            <th>Vytvořeno</th>
+                            <th>Akce</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>{{ user.id }}</td>
+                            <td>{{ user.username }}</td>
+                            <td>{{ user.email }}</td>
+                            <td>{{ user.max_vozidel }}</td>
+                            <td>
+                                {% if user.is_admin %}
+                                <span class="badge bg-success">Ano</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Ne</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ user.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editUser{{ user.id }}">
+                                    Upravit
+                                </button>
+                            </td>
+                        </tr>
+                        
+                        <!-- Modal pro úpravu uživatele -->
+                        <div class="modal fade" id="editUser{{ user.id }}" tabindex="-1" aria-labelledby="editUserLabel{{ user.id }}" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="editUserLabel{{ user.id }}">Upravit uživatele {{ user.username }}</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <form action="{{ url_for('upravit_uzivatele', id=user.id) }}" method="POST">
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <label for="max_vozidel{{ user.id }}" class="form-label">Maximální počet vozidel</label>
+                                                <input type="number" class="form-control" id="max_vozidel{{ user.id }}" name="max_vozidel" 
+                                                       value="{{ user.max_vozidel }}" min="1" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <div class="form-check">
+                                                    <input type="checkbox" class="form-check-input" id="is_admin{{ user.id }}" name="is_admin" 
+                                                           {% if user.is_admin %}checked{% endif %}>
+                                                    <label class="form-check-label" for="is_admin{{ user.id }}">Administrátor</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zavřít</button>
+                                            <button type="submit" class="btn btn-primary">Uložit změny</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

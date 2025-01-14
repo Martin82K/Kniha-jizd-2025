@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">Vozidla</h4>
+        <div>
+            <small class="text-muted me-3">Počet vozidel: {{ vozidla|length }}/{{ max_vozidel }}</small>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addVehicleModal"
+                    {% if vozidla|length >= max_vozidel %}disabled{% endif %}>
+                Přidat vozidlo
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Název</th>
+                        <th>SPZ</th>
+                        <th>Stav</th>
+                        <th>Poznámka</th>
+                        <th>Vytvořeno</th>
+                        <th>Akce</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for vozidlo in vozidla %}
+                    <tr>
+                        <td>{{ vozidlo.nazev }}</td>
+                        <td>{{ vozidlo.spz }}</td>
+                        <td>
+                            {% if vozidlo.aktivni %}
+                            <span class="badge bg-success">Aktivní</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Neaktivní</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ vozidlo.poznamka }}</td>
+                        <td>{{ vozidlo.vytvoreno.strftime('%d.%m.%Y %H:%M') }}</td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-sm btn-primary" onclick="window.location.href='{{ url_for('prepnout_vozidlo', id=vozidlo.id) }}'">
+                                    <i class="bi bi-check-lg"></i> Vybrat
+                                </button>
+                                {% if vozidlo.aktivni %}
+                                <button type="button" class="btn btn-sm btn-warning" onclick="window.location.href='{{ url_for('deaktivovat_vozidlo', id=vozidlo.id) }}'">
+                                    <i class="bi bi-pause-fill"></i> Deaktivovat
+                                </button>
+                                {% else %}
+                                <button type="button" class="btn btn-sm btn-success" onclick="window.location.href='{{ url_for('aktivovat_vozidlo', id=vozidlo.id) }}'">
+                                    <i class="bi bi-play-fill"></i> Aktivovat
+                                </button>
+                                {% endif %}
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="window.location.href='{{ url_for('upravit_vozidlo', id=vozidlo.id) }}'">
+                                    <i class="bi bi-pencil"></i> Upravit
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pro přidání vozidla -->
+<div class="modal fade" id="addVehicleModal" tabindex="-1" aria-labelledby="addVehicleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addVehicleModalLabel">Přidat nové vozidlo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ url_for('pridat_vozidlo') }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="nazev" class="form-label">Název vozidla *</label>
+                        <input type="text" class="form-control" id="nazev" name="nazev" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="spz" class="form-label">SPZ *</label>
+                        <input type="text" class="form-control" id="spz" name="spz" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="pocatecni_stav_km" class="form-label">Počáteční stav tachometru (km) *</label>
+                        <input type="number" class="form-control" id="pocatecni_stav_km" name="pocatecni_stav_km" required min="0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="poznamka" class="form-label">Poznámka</label>
+                        <textarea class="form-control" id="poznamka" name="poznamka" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Zavřít</button>
+                    <button type="submit" class="btn btn-primary">Uložit vozidlo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

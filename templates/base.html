@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="cs" data-bs-theme="{{ 'dark' if (current_user.is_authenticated and current_user.dark_mode) or session.get('dark_mode', False) else 'light' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kniha jízd</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/dark-mode.css') }}" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        .table-responsive {
+            margin-top: 20px;
+        }
+        .btn-action {
+            margin: 2px;
+        }
+        .flash-messages {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg bg-body-tertiary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('index') }}">Kniha jízd</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    {% if current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('index') }}">Přehled</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('vozidla') }}">Vozidla</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('statistiky') }}">Statistiky</a>
+                    </li>
+                    {% if session.get('aktivni_vozidlo_id') %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('jizdy_mesic', rok=now.year, mesic=now.month) }}">Měsíční přehled</a>
+                    </li>
+                    {% endif %}
+                    {% endif %}
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <button class="btn nav-link" id="toggleTheme">
+                            <i class="bi" id="themeIcon"></i>
+                            <span id="themeText">{{ 'Světlý režim' if (current_user.is_authenticated and current_user.dark_mode) or session.get('dark_mode', False) else 'Tmavý režim' }}</span>
+                        </button>
+                    </li>
+                    {% if current_user.is_authenticated %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            {{ current_user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            {% if current_user.is_admin %}
+                            <li><a class="dropdown-item" href="{{ url_for('admin') }}">Administrace</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            {% endif %}
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}">Odhlásit se</a></li>
+                        </ul>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('login') }}">Přihlásit se</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('register') }}">Registrovat se</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        {% block content %}{% endblock %}
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            function updateThemeIcon() {
+                const theme = $('html').attr('data-bs-theme');
+                $('#themeIcon').removeClass('bi-sun bi-moon-stars');
+                $('#themeIcon').addClass(theme === 'dark' ? 'bi-sun' : 'bi-moon-stars');
+                $('#themeText').text(theme === 'dark' ? 'Světlý režim' : 'Tmavý režim');
+            }
+
+            $('#toggleTheme').click(function() {
+                const currentTheme = $('html').attr('data-bs-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                
+                $.post('/toggle_theme', function(response) {
+                    if (response.success) {
+                        $('html').attr('data-bs-theme', newTheme);
+                        updateThemeIcon();
+                    }
+                });
+            });
+
+            updateThemeIcon();
+        });
+    </script>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</body>
+</html>

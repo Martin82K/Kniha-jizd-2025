@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Výběr aktivního vozidla -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Aktivní vozidlo</h5>
+                    <a href="{{ url_for('vozidla') }}" class="btn btn-sm btn-outline-primary">Správa vozidel</a>
+                </div>
+                <div class="card-body">
+                    {% if aktivni_vozidlo %}
+                        <h4>{{ aktivni_vozidlo.nazev }} ({{ aktivni_vozidlo.spz }})</h4>
+                        {% if spotreba %}
+                            <p class="mb-0">Průměrná spotřeba: {{ spotreba }} l/100km</p>
+                        {% endif %}
+                    {% else %}
+                        <p>Žádné aktivní vozidlo není vybráno. <a href="{{ url_for('vozidla') }}">Vyberte vozidlo</a></p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tlačítka pro přidání -->
+    <div class="row mb-4">
+        <div class="col">
+            <a href="{{ url_for('nova_jizda') }}" class="btn btn-primary me-2">Přidat jízdu</a>
+            <a href="{{ url_for('nove_tankovani') }}" class="btn btn-success me-2">Přidat tankování</a>
+            <a href="{{ url_for('statistiky') }}" class="btn btn-info">Zobrazit statistiky</a>
+        </div>
+    </div>
+
+    <!-- Poslední jízdy -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Poslední jízdy</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Datum</th>
+                                    <th>Řidič</th>
+                                    <th>Odkud</th>
+                                    <th>Kam</th>
+                                    <th>Km</th>
+                                    <th>Účel</th>
+                                    <th>Stav tachometru</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for jizda in jizdy %}
+                                <tr>
+                                    <td>{{ jizda.datum.strftime('%d.%m.%Y') }}</td>
+                                    <td>{{ jizda.ridic }}</td>
+                                    <td>{{ jizda.misto_odjezdu }}</td>
+                                    <td>{{ jizda.misto_prijezdu }}</td>
+                                    <td>{{ jizda.pocet_km }}</td>
+                                    <td>{{ jizda.ucel_jizdy }}</td>
+                                    <td>{{ jizda.stav_tachometru }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Poslední tankování -->
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Poslední tankování</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Datum</th>
+                                    <th>Litrů</th>
+                                    <th>Kč/l</th>
+                                    <th>Celkem Kč</th>
+                                    <th>Stav tachometru</th>
+                                    <th>Poznámka</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for tank in tankovani %}
+                                <tr>
+                                    <td>{{ tank.datum.strftime('%d.%m.%Y') }}</td>
+                                    <td>{{ tank.litru }}</td>
+                                    <td>{{ tank.cena_za_litr }}</td>
+                                    <td>{{ tank.celkova_cena }}</td>
+                                    <td>{{ tank.stav_tachometru }}</td>
+                                    <td>{{ tank.poznamka or '' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
