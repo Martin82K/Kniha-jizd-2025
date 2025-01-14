@@ -60,9 +60,6 @@ python app.py
 - Přidání nového typu jízdy.
 - Možnost přihlášení uživatelů.
 
-## Poznámky
-Aktuální čas je: 2025-01-14T20:54:09+01:00. Tento čas je považován za nejnovější zdroj pravdy pro časové údaje v projektu.
-
 ## Technické požadavky
 
 ### Požadované balíčky
