@@ -14,18 +14,24 @@
                 </div>
                 <div class="card-body">
                     <form method="POST">
+                        {{ form.hidden_tag() }}
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="datum" class="form-label">Datum a čas</label>
-                                    <input type="datetime-local" class="form-control" id="datum" name="datum" required
-                                           value="{{ now.strftime('%Y-%m-%dT%H:%M') }}">
+                                    {{ form.datum.label }}
+                                    {{ form.datum(class="form-control") }}
+                                    {% for error in form.datum.errors %}
+                                        <span class="text-danger">{{ error }}</span>
+                                    {% endfor %}
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="ridic" class="form-label">Řidič</label>
-                                    <input type="text" class="form-control" id="ridic" name="ridic" required>
+                                    {{ form.ridic.label }}
+                                    {{ form.ridic(class="form-control") }}
+                                    {% for error in form.ridic.errors %}
+                                        <span class="text-danger">{{ error }}</span>
+                                    {% endfor %}
                                 </div>
                             </div>
                         </div>
@@ -33,14 +39,20 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="misto_odjezdu" class="form-label">Místo odjezdu</label>
-                                    <input type="text" class="form-control" id="misto_odjezdu" name="misto_odjezdu" required>
+                                    {{ form.misto_odjezdu.label }}
+                                    {{ form.misto_odjezdu(class="form-control") }}
+                                    {% for error in form.misto_odjezdu.errors %}
+                                        <span class="text-danger">{{ error }}</span>
+                                    {% endfor %}
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="misto_prijezdu" class="form-label">Místo příjezdu</label>
-                                    <input type="text" class="form-control" id="misto_prijezdu" name="misto_prijezdu" required>
+                                    {{ form.misto_prijezdu.label }}
+                                    {{ form.misto_prijezdu(class="form-control") }}
+                                    {% for error in form.misto_prijezdu.errors %}
+                                        <span class="text-danger">{{ error }}</span>
+                                    {% endfor %}
                                 </div>
                             </div>
                         </div>
@@ -48,30 +60,42 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="pocet_km" class="form-label">Počet kilometrů</label>
-                                    <input type="number" step="0.1" class="form-control" id="pocet_km" name="pocet_km" required>
+                                    {{ form.pocet_km.label }}
+                                    {{ form.pocet_km(class="form-control") }}
+                                    {% for error in form.pocet_km.errors %}
+                                        <span class="text-danger">{{ error }}</span>
+                                    {% endfor %}
                                 </div>
                             </div>
                         </div>
 
                         <div class="mb-3">
-                            <label for="ucel_jizdy" class="form-label">Účel jízdy</label>
-                            <textarea class="form-control" id="ucel_jizdy" name="ucel_jizdy" rows="2" required></textarea>
+                            {{ form.ucel_jizdy.label }}
+                            {{ form.ucel_jizdy(class="form-control") }}
+                            {% for error in form.ucel_jizdy.errors %}
+                                <span class="text-danger">{{ error }}</span>
+                            {% endfor %}
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Typ jízdy</label>
-                            <div>
-                                <input type="radio" id="typ_jizdy_soukroma" name="typ_jizdy" value="soukromá" checked>
-                                <label for="typ_jizdy_soukroma">Soukromá</label>
-                                <input type="radio" id="typ_jizdy_pracovni" name="typ_jizdy" value="pracovní">
-                                <label for="typ_jizdy_pracovni">Pracovní</label>
-                            </div>
+                            {{ form.stav_tachometru.label }}
+                            {{ form.stav_tachometru(class="form-control") }}
+                            {% for error in form.stav_tachometru.errors %}
+                                <span class="text-danger">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.typ_jizdy.label }}
+                            {{ form.typ_jizdy(class="form-select") }}
+                            {% for error in form.typ_jizdy.errors %}
+                                <span class="text-danger">{{ error }}</span>
+                            {% endfor %}
                         </div>
 
                         <div class="d-flex justify-content-between">
-                            <a href="{{ url_for('index') }}" class="btn btn-secondary">Zpět</a>
-                            <button type="submit" class="btn btn-primary">Uložit jízdu</button>
+                            <a href="{{ url_for('jizdy.index') }}" class="btn btn-secondary">Zpět</a>
+                            <button type="submit" class="btn btn-primary">{{ form.submit.label }}</button>
                         </div>
                     </form>
                 </div>

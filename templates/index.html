@@ -36,41 +36,50 @@
     <!-- Poslední jízdy -->
     <div class="row mb-4">
         <div class="col">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Poslední jízdy</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Datum</th>
-                                    <th>Řidič</th>
-                                    <th>Odkud</th>
-                                    <th>Kam</th>
-                                    <th>Km</th>
-                                    <th>Účel</th>
-                                    <th>Stav tachometru</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for jizda in jizdy %}
-                                <tr>
-                                    <td>{{ jizda.datum.strftime('%d.%m.%Y') }}</td>
-                                    <td>{{ jizda.ridic }}</td>
-                                    <td>{{ jizda.misto_odjezdu }}</td>
-                                    <td>{{ jizda.misto_prijezdu }}</td>
-                                    <td>{{ jizda.pocet_km }}</td>
-                                    <td>{{ jizda.ucel_jizdy }}</td>
-                                    <td>{{ jizda.stav_tachometru }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+            <h2>Přehled jízd</h2>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Datum</th>
+                        <th>Řidič</th>
+                        <th>Odkud</th>
+                        <th>Kam</th>
+                        <th>Počet km</th>
+                        <th>Účel</th>
+                        <th>Stav tachometru</th>
+                        <th>Typ jízdy</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for j in jizdy.items %}
+                    <tr>
+                        <td>{{ j.datum.strftime('%d.%m.%Y %H:%M') }}</td>
+                        <td>{{ j.ridic }}</td>
+                        <td>{{ j.misto_odjezdu }}</td>
+                        <td>{{ j.misto_prijezdu }}</td>
+                        <td>{{ j.pocet_km }}</td>
+                        <td>{{ j.ucel_jizdy }}</td>
+                        <td>{{ j.stav_tachometru }}</td>
+                        <td>{{ j.typ_jizdy }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            <nav aria-label="Stránkování">
+                <ul class="pagination">
+                    {% if jizdy.has_prev %}
+                        <li class="page-item"><a class="page-link" href="?page={{ jizdy.prev_num }}">Předchozí</a></li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">Předchozí</span></li>
+                    {% endif %}
+                    <li class="page-item active"><span class="page-link">Strana {{ jizdy.page }} / {{ jizdy.pages }}</span></li>
+                    {% if jizdy.has_next %}
+                        <li class="page-item"><a class="page-link" href="?page={{ jizdy.next_num }}">Další</a></li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">Další</span></li>
+                    {% endif %}
+                </ul>
+            </nav>
         </div>
     </div>
 

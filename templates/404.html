@@ -1,0 +1,8 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4 text-center">
+    <h1>404 - Stránka nenalezena</h1>
+    <p>Omlouváme se, ale požadovaná stránka neexistuje.</p>
+    <a href="{{ url_for('jizdy.index') }}" class="btn btn-primary">Zpět na hlavní stránku</a>
+</div>
+{% endblock %}

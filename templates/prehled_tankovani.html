@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Přehled tankování</h2>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Datum</th>
+                <th>Stav tachometru</th>
+                <th>Litry</th>
+                <th>Cena za litr</th>
+                <th>Celková cena</th>
+                <th>Poznámka</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for t in tankovani.items %}
+            <tr>
+                <td>{{ t.datum.strftime('%d.%m.%Y %H:%M') }}</td>
+                <td>{{ t.stav_tachometru }}</td>
+                <td>{{ t.litru }}</td>
+                <td>{{ t.cena_za_litr }}</td>
+                <td>{{ t.celkova_cena }}</td>
+                <td>{{ t.poznamka }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <nav aria-label="Stránkování">
+        <ul class="pagination">
+            {% if tankovani.has_prev %}
+                <li class="page-item"><a class="page-link" href="?page={{ tankovani.prev_num }}">Předchozí</a></li>
+            {% else %}
+                <li class="page-item disabled"><span class="page-link">Předchozí</span></li>
+            {% endif %}
+            <li class="page-item active"><span class="page-link">Strana {{ tankovani.page }} / {{ tankovani.pages }}</span></li>
+            {% if tankovani.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ tankovani.next_num }}">Další</a></li>
+            {% else %}
+                <li class="page-item disabled"><span class="page-link">Další</span></li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endblock %}

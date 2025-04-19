@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Upravit tankování</h2>
+    <form method="POST">
+        {{ form.hidden_tag() }}
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    {{ form.datum.label }}
+                    {{ form.datum(class="form-control") }}
+                    {% for error in form.datum.errors %}
+                        <span class="text-danger">{{ error }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    {{ form.stav_tachometru.label }}
+                    {{ form.stav_tachometru(class="form-control") }}
+                    {% for error in form.stav_tachometru.errors %}
+                        <span class="text-danger">{{ error }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="mb-3">
+                    {{ form.litru.label }}
+                    {{ form.litru(class="form-control") }}
+                    {% for error in form.litru.errors %}
+                        <span class="text-danger">{{ error }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="mb-3">
+                    {{ form.cena_za_litr.label }}
+                    {{ form.cena_za_litr(class="form-control") }}
+                    {% for error in form.cena_za_litr.errors %}
+                        <span class="text-danger">{{ error }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="mb-3">
+                    {{ form.celkova_cena.label if form.celkova_cena else 'Celková cena' }}
+                    <input type="number" class="form-control" readonly>
+                </div>
+            </div>
+        </div>
+        <div class="mb-3">
+            {{ form.poznamka.label }}
+            {{ form.poznamka(class="form-control") }}
+            {% for error in form.poznamka.errors %}
+                <span class="text-danger">{{ error }}</span>
+            {% endfor %}
+        </div>
+        <div class="d-flex justify-content-between">
+            <a href="{{ url_for('tankovani.prehled_tankovani') }}" class="btn btn-secondary">Zpět</a>
+            <button type="submit" class="btn btn-primary">Uložit změny</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

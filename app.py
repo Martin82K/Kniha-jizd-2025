@@ -16,6 +16,8 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER
 from functools import wraps
+from routes.export import export_bp
+from routes.statistiky import statistiky_bp
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///kniha_jizd_v3.db'
@@ -595,166 +597,21 @@ def jizdy_mesic(rok, mesic):
         konecny_stav=konecny_stav
     )
 
-@app.route('/export_pdf/<int:rok>/<int:mesic>')
-@login_required
-def export_pdf(rok, mesic):
-    aktivni_vozidlo_id = session.get('aktivni_vozidlo_id')
-    if not aktivni_vozidlo_id:
-        flash('Nejprve vyberte aktivní vozidlo', 'danger')
-        return redirect(url_for('vozidla'))
-    
-    vozidlo = Vozidlo.query.get_or_404(aktivni_vozidlo_id)
-    if vozidlo.user_id != current_user.id:
-        flash('Nemáte oprávnění k tomuto vozidlu', 'danger')
-        return redirect(url_for('index'))
-    
-    _, posledni_den = calendar.monthrange(rok, mesic)
-    zacatek_mesice = datetime(rok, mesic, 1)
-    konec_mesice = datetime(rok, mesic, posledni_den, 23, 59, 59)
-    
-    jizdy = Jizda.query.filter(
-        Jizda.vozidlo_id == aktivni_vozidlo_id,
-        Jizda.datum >= zacatek_mesice,
-        Jizda.datum <= konec_mesice
-    ).order_by(Jizda.datum).all()
-    
-    # Výpočet statistik
-    pocatecni_stav = None
-    konecny_stav = None
-    celkem_km = 0
-    celkem_sluzebne = 0
-    celkem_soukrome = 0
-    
-    if jizdy:
-        pocatecni_stav = jizdy[0].stav_tachometru - jizdy[0].pocet_km
-        konecny_stav = jizdy[-1].stav_tachometru
-        
-        for jizda in jizdy:
-            if jizda.typ_jizdy == 'služební':
-                celkem_sluzebne += jizda.pocet_km
-            else:
-                celkem_soukrome += jizda.pocet_km
-            celkem_km += jizda.pocet_km
-    
-    # Vytvoření PDF
-    doc = SimpleDocTemplate("kniha_jizd.pdf", pagesize=A4, rightMargin=30,leftMargin=30, topMargin=30,bottomMargin=18)
-    styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle(name='Justify', alignment=TA_JUSTIFY))
-    styleN = styles["BodyText"]
-    styleN.alignment = TA_JUSTIFY
-    styleH = styles['Heading1']
-    styleH.alignment = TA_CENTER
-    
-    data = []
-    data.append(['Datum', 'Řidič', 'Odkud', 'Kam', 'Km', 'Účel jízdy', 'Stav km', 'Typ jízdy'])
-    
-    for jizda in jizdy:
-        data.append([jizda.datum.strftime('%d.%m.%Y %H:%M'), jizda.ridic, jizda.misto_odjezdu, jizda.misto_prijezdu, str(jizda.pocet_km), jizda.ucel_jizdy, str(jizda.stav_tachometru), jizda.typ_jizdy])
-    
-    table = Table(data, style=[('GRID', (0,0), (-1,-1), 1, colors.black), ('VALIGN', (0,0), (-1,-1), 'MIDDLE')])
-    elems = []
-    elems.append(Paragraph(f'Kniha jízd - {vozidlo.nazev} ({vozidlo.spz})', styleH))
-    elems.append(Paragraph(f'Období: {mesic}/{rok}', styleN))
-    elems.append(table)
-    
-    doc.build(elems)
-    
-    nazev_souboru = f'kniha_jizd_{vozidlo.spz}_{rok}_{mesic:02d}.pdf'
-    cesta_k_souboru = os.path.join(app.static_folder, 'exports', nazev_souboru)
-    
-    return send_file(
-        cesta_k_souboru,
-        as_attachment=True,
-        download_name=nazev_souboru,
-        mimetype='application/pdf'
-    )
-
-@app.route('/export_xls/<int:rok>/<int:mesic>')
-@login_required
-def export_xls(rok, mesic):
-    aktivni_vozidlo_id = session.get('aktivni_vozidlo_id')
-    if not aktivni_vozidlo_id:
-        flash('Nejprve vyberte aktivní vozidlo', 'danger')
-        return redirect(url_for('vozidla'))
-    
-    vozidlo = Vozidlo.query.get_or_404(aktivni_vozidlo_id)
-    if vozidlo.user_id != current_user.id:
-        flash('Nemáte oprávnění k tomuto vozidlu', 'danger')
-        return redirect(url_for('index'))
-    
-    _, posledni_den = calendar.monthrange(rok, mesic)
-    zacatek_mesice = datetime(rok, mesic, 1)
-    konec_mesice = datetime(rok, mesic, posledni_den, 23, 59, 59)
-    
-    jizdy = Jizda.query.filter(
-        Jizda.vozidlo_id == aktivni_vozidlo_id,
-        Jizda.datum >= zacatek_mesice,
-        Jizda.datum <= konec_mesice
-    ).order_by(Jizda.datum).all()
-    
-    # Výpočet statistik
-    pocatecni_stav = None
-    konecny_stav = None
-    celkem_km = 0
-    celkem_sluzebne = 0
-    celkem_soukrome = 0
-    
-    if jizdy:
-        pocatecni_stav = jizdy[0].stav_tachometru - jizdy[0].pocet_km
-        konecny_stav = jizdy[-1].stav_tachometru
-        
-        for jizda in jizdy:
-            if jizda.typ_jizdy == 'služební':
-                celkem_sluzebne += jizda.pocet_km
-            else:
-                celkem_soukrome += jizda.pocet_km
-            celkem_km += jizda.pocet_km
-    
-    # Vytvoření statistiky
-    statistika = pd.DataFrame([{
-        'Vozidlo': f"{vozidlo.nazev} ({vozidlo.spz})",
-        'Období': f"{mesic}/{rok}",
-        'Počáteční stav': pocatecni_stav if pocatecni_stav is not None else 0,
-        'Konečný stav': konecny_stav if konecny_stav is not None else 0,
-        'Celkem km': celkem_km,
-        'Služební km': celkem_sluzebne,
-        'Soukromé km': celkem_soukrome
-    }])
-    
-    # Připravit data jízd pro export
-    data = []
-    for jizda in jizdy:
-        data.append({
-            'Datum': jizda.datum.strftime('%d.%m.%Y %H:%M'),
-            'Řidič': jizda.ridic,
-            'Odkud': jizda.misto_odjezdu,
-            'Kam': jizda.misto_prijezdu,
-            'Km': jizda.pocet_km,
-            'Účel jízdy': jizda.ucel_jizdy,
-            'Stav km': jizda.stav_tachometru,
-            'Typ jízdy': jizda.typ_jizdy
-        })
-    
-    # Vytvoření DataFrame a export do XLSX
-    df_jizdy = pd.DataFrame(data)
-    nazev_souboru = f'kniha_jizd_{vozidlo.spz}_{rok}_{mesic:02d}.xlsx'
-    cesta_k_souboru = os.path.join(app.static_folder, 'exports', nazev_souboru)
-    
-    # Export do XLSX s více listy
-    with pd.ExcelWriter(cesta_k_souboru, engine='openpyxl') as writer:
-        statistika.to_excel(writer, sheet_name='Statistika', index=False)
-        df_jizdy.to_excel(writer, sheet_name='Jízdy', index=False)
-    
-    return send_file(
-        cesta_k_souboru,
-        as_attachment=True,
-        download_name=nazev_souboru,
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
+app.register_blueprint(export_bp)
+app.register_blueprint(statistiky_bp)
 
 @app.context_processor
 def utility_processor():
     return {'now': datetime.now()}
+
+# Error handlery
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_error(e):
+    return render_template('500.html'), 500
 
 # Inicializace databáze - vytvoření pouze pokud neexistuje
 with app.app_context():
