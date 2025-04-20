@@ -1,3 +1,5 @@
+{% if now is not defined %}{% set now = namespace(year=2025, month=4) %}{% endif %}
+
 <!DOCTYPE html>
 <html lang="cs" data-bs-theme="{{ 'dark' if current_user.is_authenticated and current_user.dark_mode else 'dark' }}">
 <head>
@@ -42,10 +44,9 @@
             letter-spacing: 1px;
             color: #fff !important;
         }
-        .nav-link {
-            border-radius: 8px;
-            transition: background 0.2s, color 0.2s;
+        .nav-link, .navbar-nav .nav-link, .navbar-brand {
             color: #f4f4f4 !important;
+            transition: color 0.2s;
         }
         .nav-link:hover, .nav-link.active {
             background: #393e6e;
@@ -54,7 +55,7 @@
         .btn, .btn-action {
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(67,97,238,0.10);
-            transition: box-shadow 0.2s, background 0.2s;
+            transition: box-shadow 0.2s, background 0.2s, color 0.2s;
             background: #232946;
             color: #fff;
             border: none;
@@ -62,6 +63,23 @@
         .btn:hover, .btn-action:hover {
             box-shadow: 0 4px 16px rgba(67,97,238,0.18);
             background: #fff;
+            color: #232946;
+        }
+
+        /* SVĚTLÝ REŽIM - změna barev navbaru a textu */
+        [data-bs-theme="light"] .navbar {
+            background: #fff !important;
+        }
+        [data-bs-theme="light"] .navbar-brand,
+        [data-bs-theme="light"] .nav-link,
+        [data-bs-theme="light"] .navbar-nav .nav-link {
+            color: #232946 !important;
+        }
+        [data-bs-theme="light"] .nav-link:hover, [data-bs-theme="light"] .nav-link.active {
+            background: #e9ecef;
+            color: #232946 !important;
+        }
+        [data-bs-theme="light"] .btn#toggleTheme, [data-bs-theme="light"] .btn#toggleTheme:focus {
             color: #232946;
         }
         .alert {
@@ -147,7 +165,7 @@
                     </li>
                     {% if session.get('aktivni_vozidlo_id') %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('jizdy_mesic', rok=now.year, mesic=now.month) }}">Měsíční přehled</a>
+                        <a class="nav-link" href="{{ url_for('jizdy_mesic', rok=now.year if now is defined else 2025, mesic=now.month if now is defined else 4) }}">Měsíční přehled</a>
                     </li>
                     {% endif %}
                     {% endif %}

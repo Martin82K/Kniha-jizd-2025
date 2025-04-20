@@ -10,4 +10,5 @@ class JizdaForm(FlaskForm):
     ucel_jizdy = StringField('Účel jízdy', validators=[DataRequired(), Length(min=2, max=200)])
     stav_tachometru = IntegerField('Stav tachometru', validators=[DataRequired()])
     typ_jizdy = SelectField('Typ jízdy', choices=[('služební','Služební'),('soukromá','Soukromá')], validators=[DataRequired()])
+    ridic = StringField('Řidič', validators=[DataRequired(), Length(min=2, max=100)])
     submit = SubmitField('Uložit jízdu')

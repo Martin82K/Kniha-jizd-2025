@@ -18,6 +18,7 @@ from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER
 from functools import wraps
 from routes.export import export_bp
 from routes.statistiky import statistiky_bp
+from routes.jizdy import jizdy_bp
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///kniha_jizd_v3.db'
@@ -319,82 +320,84 @@ def deaktivovat_vozidlo(id):
     flash(f'Vozidlo {vozidlo.nazev} bylo deaktivováno', 'success')
     return redirect(url_for('vozidla'))
 
-@app.route('/nova_jizda', methods=['GET', 'POST'])
-@login_required
-def nova_jizda():
-    if request.method == 'POST':
-        aktivni_vozidlo_id = session.get('aktivni_vozidlo_id')
-        if not aktivni_vozidlo_id:
-            flash('Nejprve vyberte aktivní vozidlo', 'danger')
-            return redirect(url_for('vozidla'))
+# @app.route('/nova_jizda', methods=['GET', 'POST'])
+# @login_required
+# def nova_jizda():
+#     if request.method == 'POST':
+#         aktivni_vozidlo_id = session.get('aktivni_vozidlo_id')
+#         if not aktivni_vozidlo_id:
+#             flash('Nejprve vyberte aktivní vozidlo', 'danger')
+#             return redirect(url_for('vozidla'))
         
-        vozidlo = Vozidlo.query.get_or_404(aktivni_vozidlo_id)
-        if vozidlo.user_id != current_user.id:
-            flash('Nemáte oprávnění k tomuto vozidlu', 'danger')
-            return redirect(url_for('index'))
+#         vozidlo = Vozidlo.query.get_or_404(aktivni_vozidlo_id)
+#         if vozidlo.user_id != current_user.id:
+#             flash('Nemáte oprávnění k tomuto vozidlu', 'danger')
+#             return redirect(url_for('index'))
         
-        datum = request.form.get('datum')
-        ridic = request.form.get('ridic')
-        misto_odjezdu = request.form.get('misto_odjezdu')
-        misto_prijezdu = request.form.get('misto_prijezdu')
-        pocet_km = request.form.get('pocet_km', type=float)
-        ucel_jizdy = request.form.get('ucel_jizdy')
-        typ_jizdy = request.form.get('typ_jizdy')  # Získání typu jízdy ze vstupu
+#         datum = request.form.get('datum')
+#         ridic = request.form.get('ridic')
+#         misto_odjezdu = request.form.get('misto_odjezdu')
+#         misto_prijezdu = request.form.get('misto_prijezdu')
+#         pocet_km = request.form.get('pocet_km', type=float)
+#         ucel_jizdy = request.form.get('ucel_jizdy')
+#         typ_jizdy = request.form.get('typ_jizdy')  # Získání typu jízdy ze vstupu
         
-        if typ_jizdy not in ['soukromá', 'pracovní']:
-            flash('Neplatný typ jízdy', 'danger')
-            return redirect(url_for('nova_jizda'))
+#         if typ_jizdy not in ['soukromá', 'pracovní']:
+#             flash('Neplatný typ jízdy', 'danger')
+#             return redirect(url_for('nova_jizda'))
         
-        if not all([datum, ridic, misto_odjezdu, misto_prijezdu, pocet_km, ucel_jizdy]):
-            flash('Všechna pole jsou povinná', 'danger')
-            return redirect(url_for('nova_jizda'))
+#         if not all([datum, ridic, misto_odjezdu, misto_prijezdu, pocet_km, ucel_jizdy]):
+#             flash('Všechna pole jsou povinná', 'danger')
+#             return redirect(url_for('nova_jizda'))
         
-        try:
-            datum = datetime.strptime(datum, '%Y-%m-%dT%H:%M')
-        except ValueError:
-            flash('Neplatný formát data a času', 'danger')
-            return redirect(url_for('nova_jizda'))
+#         try:
+#             datum = datetime.strptime(datum, '%Y-%m-%dT%H:%M')
+#         except ValueError:
+#             flash('Neplatný formát data a času', 'danger')
+#             return redirect(url_for('nova_jizda'))
         
-        if pocet_km <= 0:
-            flash('Počet kilometrů musí být větší než 0', 'danger')
-            return redirect(url_for('nova_jizda'))
+#         if pocet_km <= 0:
+#             flash('Počet kilometrů musí být větší než 0', 'danger')
+#             return redirect(url_for('nova_jizda'))
         
-        # Výpočet nového stavu tachometru
-        novy_stav_tachometru = vozidlo.aktualni_stav_km + int(pocet_km)
+#         # Výpočet nového stavu tachometru
+#         novy_stav_tachometru = vozidlo.aktualni_stav_km + int(pocet_km)
         
-        jizda = Jizda(
-            datum=datum,
-            vozidlo_id=aktivni_vozidlo_id,
-            ridic=ridic,
-            misto_odjezdu=misto_odjezdu,
-            misto_prijezdu=misto_prijezdu,
-            pocet_km=pocet_km,
-            ucel_jizdy=ucel_jizdy,
-            stav_tachometru=novy_stav_tachometru,
-            typ_jizdy=typ_jizdy  # Uložení typu jízdy
-        )
+#         jizda = Jizda(
+#             datum=datum,
+#             vozidlo_id=aktivni_vozidlo_id,
+#             ridic=ridic,
+#             misto_odjezdu=misto_odjezdu,
+#             misto_prijezdu=misto_prijezdu,
+#             pocet_km=pocet_km,
+#             ucel_jizdy=ucel_jizdy,
+#             stav_tachometru=novy_stav_tachometru,
+#             typ_jizdy=typ_jizdy  # Uložení typu jízdy
+#         )
         
-        # Aktualizace stavu tachometru vozidla
-        vozidlo.aktualni_stav_km = novy_stav_tachometru
+#         # Aktualizace stavu tachometru vozidla
+#         vozidlo.aktualni_stav_km = novy_stav_tachometru
         
-        db.session.add(jizda)
-        try:
-            db.session.commit()
-            flash('Jízda byla úspěšně přidána', 'success')
-            return redirect(url_for('index'))
-        except:
-            db.session.rollback()
-            flash('Chyba při ukládání jízdy', 'danger')
-            return redirect(url_for('nova_jizda'))
+#         db.session.add(jizda)
+#         try:
+#             db.session.commit()
+#             flash('Jízda byla úspěšně přidána', 'success')
+#             return redirect(url_for('index'))
+#         except:
+#             db.session.rollback()
+#             flash('Chyba při ukládání jízdy', 'danger')
+#             return redirect(url_for('nova_jizda'))
     
-    aktivni_vozidlo_id = session.get('aktivni_vozidlo_id')
-    aktivni_vozidlo = None
-    if aktivni_vozidlo_id:
-        aktivni_vozidlo = Vozidlo.query.get(aktivni_vozidlo_id)
-        if aktivni_vozidlo and aktivni_vozidlo.user_id != current_user.id:
-            aktivni_vozidlo = None
+#     aktivni_vozidlo_id = session.get('aktivni_vozidlo_id')
+#     aktivni_vozidlo = None
+#     if aktivni_vozidlo_id:
+#         aktivni_vozidlo = Vozidlo.query.get(aktivni_vozidlo_id)
+#         if aktivni_vozidlo and aktivni_vozidlo.user_id != current_user.id:
+#             aktivni_vozidlo = None
     
-    return render_template('nova_jizda.html', aktivni_vozidlo=aktivni_vozidlo, now=datetime.now())
+#     from forms.jizdy_forms import JizdaForm
+#     form = JizdaForm()
+#     return render_template('nova_jizda.html', form=form, aktivni_vozidlo=aktivni_vozidlo, now=datetime.now())
 
 @app.route('/nove_tankovani', methods=['GET', 'POST'])
 @login_required
@@ -437,7 +440,9 @@ def nove_tankovani():
         return redirect(url_for('vozidla'))
         
     aktivni_vozidlo = Vozidlo.query.get(aktivni_vozidlo_id)
-    return render_template('nove_tankovani.html', aktivni_vozidlo=aktivni_vozidlo, now=datetime.now())
+    from forms.tankovani_forms import TankovaniForm
+    form = TankovaniForm()
+    return render_template('nove_tankovani.html', form=form, aktivni_vozidlo=aktivni_vozidlo, now=datetime.now())
 
 @app.route('/statistiky')
 @login_required
@@ -597,12 +602,13 @@ def jizdy_mesic(rok, mesic):
         konecny_stav=konecny_stav
     )
 
+@app.context_processor
+def inject_now():
+    return {'now': datetime.now()}
+
 app.register_blueprint(export_bp)
 app.register_blueprint(statistiky_bp)
-
-@app.context_processor
-def utility_processor():
-    return {'now': datetime.now()}
+app.register_blueprint(jizdy_bp, url_prefix='')
 
 # Error handlery
 @app.errorhandler(404)
@@ -618,4 +624,4 @@ with app.app_context():
     db.create_all()
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, use_reloader=False)

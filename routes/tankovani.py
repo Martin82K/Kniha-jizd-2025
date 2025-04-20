@@ -28,7 +28,11 @@ def nove_tankovani():
         db.session.commit()
         flash('Tankování bylo uloženo.', 'success')
         return redirect(url_for('vozidla.vozidla'))
-    return render_template('nove_tankovani.html', form=form)
+    aktivni_vozidlo_id = session.get('aktivni_vozidlo_id')
+    aktivni_vozidlo = None
+    if aktivni_vozidlo_id:
+        aktivni_vozidlo = Vozidlo.query.get(aktivni_vozidlo_id)
+    return render_template('nove_tankovani.html', form=form, aktivni_vozidlo=aktivni_vozidlo)
 
 @tankovani_bp.route('/prehled_tankovani')
 @login_required

@@ -38,7 +38,11 @@ def nova_jizda():
         db.session.commit()
         flash('Jízda byla uložena.', 'success')
         return redirect(url_for('jizdy.index'))
-    return render_template('nova_jizda.html', form=form)
+    aktivni_vozidlo_id = session.get('aktivni_vozidlo_id')
+    aktivni_vozidlo = None
+    if aktivni_vozidlo_id:
+        aktivni_vozidlo = Vozidlo.query.get(aktivni_vozidlo_id)
+    return render_template('nova_jizda.html', form=form, aktivni_vozidlo=aktivni_vozidlo)
 
 @jizdy_bp.route('/edit_jizda/<int:jizda_id>', methods=['GET', 'POST'])
 @login_required

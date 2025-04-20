@@ -25,15 +25,7 @@
                                     {% endfor %}
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    {{ form.ridic.label }}
-                                    {{ form.ridic(class="form-control") }}
-                                    {% for error in form.ridic.errors %}
-                                        <span class="text-danger">{{ error }}</span>
-                                    {% endfor %}
-                                </div>
-                            </div>
+                            <!-- ODEBRÁNO: Pole ridic, protože se bere automaticky z přihlášeného uživatele -->
                         </div>
 
                         <div class="row">
