@@ -13,13 +13,30 @@
                     {% endif %}
                 </div>
                 <div class="card-body">
+                    {# Globální výpis všech chyb formuláře #}
+                    {% if form.errors %}
+                        <div class="alert alert-danger">
+                            <ul class="mb-0">
+                            {% for field, errors in form.errors.items() %}
+                                {% for error in errors %}
+                                    <li>{{ field }}: {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
                     <form method="POST">
                         {{ form.hidden_tag() }}
                         <div class="row">
                             <div class="col-md-6">
-                                <div class="mb-3">
+                                <div class="mb-3 position-relative">
                                     {{ form.datum.label }}
-                                    {{ form.datum(class="form-control") }}
+                                    <div class="input-group">
+                                        {{ form.datum(class="form-control", type="date") }}
+                                        <span class="input-group-text" id="calendar-addon" style="cursor:pointer;">
+                                            <i class="bi bi-calendar-event"></i>
+                                        </span>
+                                    </div>
                                     {% for error in form.datum.errors %}
                                         <span class="text-danger">{{ error }}</span>
                                     {% endfor %}
@@ -90,6 +107,17 @@
                             <button type="submit" class="btn btn-primary">{{ form.submit.label }}</button>
                         </div>
                     </form>
+                    <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const calendarIcon = document.getElementById('calendar-addon');
+                        const dateInput = document.querySelector('input[name="datum"]');
+                        if (calendarIcon && dateInput) {
+                            calendarIcon.addEventListener('click', function() {
+                                dateInput.focus();
+                            });
+                        }
+                    });
+                    </script>
                 </div>
             </div>
         </div>

@@ -6,4 +6,5 @@ class VozidloForm(FlaskForm):
     nazev = StringField('Název vozidla', validators=[DataRequired(), Length(min=2, max=100)])
     spz = StringField('SPZ', validators=[DataRequired(), Length(min=2, max=20)])
     pocatecni_stav_km = IntegerField('Počáteční stav km', validators=[DataRequired()])
+    poznamka = StringField('Poznámka')
     submit = SubmitField('Uložit vozidlo')

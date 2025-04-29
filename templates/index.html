@@ -48,6 +48,7 @@
                         <th>Účel</th>
                         <th>Stav tachometru</th>
                         <th>Typ jízdy</th>
+                        <th>Akce</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -61,6 +62,18 @@
                         <td>{{ j.ucel_jizdy }}</td>
                         <td>{{ j.stav_tachometru }}</td>
                         <td>{{ j.typ_jizdy }}</td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('jizdy.edit_jizda', jizda_id=j.id) }}" class="btn btn-sm btn-secondary">
+                                    <i class="bi bi-pencil"></i> Upravit
+                                </a>
+                                <form action="{{ url_for('jizdy.delete_jizda', jizda_id=j.id) }}" method="post" style="display:inline;">
+                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Opravdu chcete smazat tuto jízdu?');">
+                                        <i class="bi bi-trash"></i> Smazat
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
                     </tr>
                 {% endfor %}
                 </tbody>

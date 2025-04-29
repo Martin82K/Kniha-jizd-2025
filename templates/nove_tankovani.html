@@ -16,9 +16,14 @@
                         {{ form.hidden_tag() }}
                         <div class="row">
                             <div class="col-md-6">
-                                <div class="mb-3">
+                                <div class="mb-3 position-relative">
                                     {{ form.datum.label }}
-                                    {{ form.datum(class="form-control") }}
+                                    <div class="input-group">
+                                        {{ form.datum(class="form-control", type="date") }}
+                                        <span class="input-group-text" id="calendar-addon-tankovani" style="cursor:pointer;">
+                                            <i class="bi bi-calendar-event"></i>
+                                        </span>
+                                    </div>
                                     {% for error in form.datum.errors %}
                                         <span class="text-danger">{{ error }}</span>
                                     {% endfor %}
@@ -96,5 +101,13 @@ document.addEventListener('DOMContentLoaded', function() {
     litruInput.addEventListener('input', vypocetCelkoveCeny);
     cenaZaLitrInput.addEventListener('input', vypocetCelkoveCeny);
 });
+
+const calendarIcon = document.getElementById('calendar-addon-tankovani');
+const dateInput = document.querySelector('input[name="datum"]');
+if (calendarIcon && dateInput) {
+    calendarIcon.addEventListener('click', function() {
+        dateInput.focus();
+    });
+}
 </script>
 {% endblock %}

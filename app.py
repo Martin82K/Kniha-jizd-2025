@@ -221,32 +221,39 @@ def index():
     aktivni_vozidlo_id = session.get('aktivni_vozidlo_id')
     if not aktivni_vozidlo_id:
         flash('Nejprve vyberte aktivní vozidlo', 'warning')
-        return redirect(url_for('vozidla'))
+        return redirect(url_for('vozidla.vozidla'))
     
     aktivni_vozidlo = Vozidlo.query.get(aktivni_vozidlo_id)
     if not aktivni_vozidlo:
         flash('Vybrané vozidlo neexistuje', 'danger')
-        return redirect(url_for('vozidla'))
+        return redirect(url_for('vozidla.vozidla'))
     
-    # Načtení jízd pro aktivní vozidlo
-    jizdy = Jizda.query.filter_by(vozidlo_id=aktivni_vozidlo.id).order_by(Jizda.datum.desc()).all()
+    # Stránkování jízd
+    page = request.args.get('page', 1, type=int)
+    per_page = 10  # počet záznamů na stránku
     
-    # Načtení tankování pro aktivní vozidlo
-    tankovani = Tankovani.query.filter_by(vozidlo_id=aktivni_vozidlo.id).order_by(Tankovani.datum.desc()).all()
+    # Načtení jízd pro aktivní vozidlo s paginací
+    jizdy_pagination = Jizda.query.filter_by(vozidlo_id=aktivni_vozidlo.id).order_by(Jizda.datum.desc()).paginate(page=page, per_page=per_page)
     
-    # Výpočet celkové spotřeby
-    celkem_km = sum(j.pocet_km for j in jizdy) if jizdy else 0
-    celkem_litru = sum(t.litru for t in tankovani) if tankovani else 0
-    prumerna_spotreba = (celkem_litru / celkem_km * 100) if celkem_km > 0 else 0
+    # Načtení tankování pro aktivní vozidlo (pouze posledních 5)
+    tankovani = Tankovani.query.filter_by(vozidlo_id=aktivni_vozidlo.id).order_by(Tankovani.datum.desc()).limit(5).all()
+    
+    # Výpočet průměrné spotřeby
+    vsechny_jizdy = Jizda.query.filter_by(vozidlo_id=aktivni_vozidlo.id).all()
+    vsechna_tankovani = Tankovani.query.filter_by(vozidlo_id=aktivni_vozidlo.id).all()
+    
+    celkem_km = sum(j.pocet_km for j in vsechny_jizdy) if vsechny_jizdy else 0
+    celkem_litru = sum(t.litru for t in vsechna_tankovani) if vsechna_tankovani else 0
+    spotreba = round((celkem_litru / celkem_km * 100), 2) if celkem_km > 0 and celkem_litru > 0 else None
     
     vozidla = Vozidlo.query.filter_by(user_id=current_user.id).all()
     
     return render_template('index.html', 
-                         jizdy=jizdy, 
+                         jizdy=jizdy_pagination, 
                          tankovani=tankovani,
                          aktivni_vozidlo=aktivni_vozidlo,
                          vozidla=vozidla,
-                         prumerna_spotreba=prumerna_spotreba)
+                         spotreba=spotreba)
 
 @app.route('/vozidla')
 @login_required
@@ -264,17 +271,17 @@ def pridat_vozidlo():
     
     if not nazev or not spz or pocatecni_stav_km is None:
         flash('Název, SPZ a počáteční stav tachometru jsou povinné údaje', 'danger')
-        return redirect(url_for('vozidla'))
+        return redirect(url_for('vozidla.vozidla'))
     
     if pocatecni_stav_km < 0:
         flash('Počáteční stav tachometru nemůže být záporný', 'danger')
-        return redirect(url_for('vozidla'))
+        return redirect(url_for('vozidla.vozidla'))
     
     # Kontrola limitu vozidel
     aktualni_pocet = Vozidlo.query.filter_by(user_id=current_user.id).count()
     if aktualni_pocet >= current_user.max_vozidel:
         flash(f'Dosáhli jste maximálního počtu vozidel ({current_user.max_vozidel})', 'danger')
-        return redirect(url_for('vozidla'))
+        return redirect(url_for('vozidla.vozidla'))
     
     vozidlo = Vozidlo(
         nazev=nazev,
@@ -292,7 +299,7 @@ def pridat_vozidlo():
         db.session.rollback()
         flash('Chyba při ukládání vozidla. SPZ musí být unikátní.', 'danger')
     
-    return redirect(url_for('vozidla'))
+    return redirect(url_for('vozidla.vozidla'))
 
 @app.route('/prepnout_vozidlo/<int:id>')
 @login_required
@@ -309,7 +316,7 @@ def aktivovat_vozidlo(id):
     vozidlo.aktivni = True
     db.session.commit()
     flash(f'Vozidlo {vozidlo.nazev} bylo aktivováno', 'success')
-    return redirect(url_for('vozidla'))
+    return redirect(url_for('vozidla.vozidla'))
 
 @app.route('/deaktivovat_vozidlo/<int:id>')
 @login_required
@@ -318,7 +325,7 @@ def deaktivovat_vozidlo(id):
     vozidlo.aktivni = False
     db.session.commit()
     flash(f'Vozidlo {vozidlo.nazev} bylo deaktivováno', 'success')
-    return redirect(url_for('vozidla'))
+    return redirect(url_for('vozidla.vozidla'))
 
 # @app.route('/nova_jizda', methods=['GET', 'POST'])
 # @login_required
@@ -406,7 +413,7 @@ def nove_tankovani():
         aktivni_vozidlo_id = session.get('aktivni_vozidlo_id')
         if not aktivni_vozidlo_id:
             flash('Nejprve vyberte aktivní vozidlo', 'danger')
-            return redirect(url_for('vozidla'))
+            return redirect(url_for('vozidla.vozidla'))
 
         try:
             stav_tachometru = int(request.form['stav_tachometru'])
@@ -437,7 +444,7 @@ def nove_tankovani():
     aktivni_vozidlo_id = session.get('aktivni_vozidlo_id')
     if not aktivni_vozidlo_id:
         flash('Nejprve vyberte aktivní vozidlo', 'danger')
-        return redirect(url_for('vozidla'))
+        return redirect(url_for('vozidla.vozidla'))
         
     aktivni_vozidlo = Vozidlo.query.get(aktivni_vozidlo_id)
     from forms.tankovani_forms import TankovaniForm
@@ -528,24 +535,25 @@ def posledni_stav_tachometru(spz):
     
     return jsonify({'stav_tachometru': None})
 
-@app.route('/upravit_vozidlo/<int:id>', methods=['GET', 'POST'])
-@login_required
-def upravit_vozidlo(id):
-    vozidlo = Vozidlo.query.get_or_404(id)
-    if request.method == 'POST':
-        vozidlo.nazev = request.form['nazev']
-        vozidlo.spz = request.form['spz']
-        vozidlo.poznamka = request.form.get('poznamka')
-        
-        try:
-            db.session.commit()
-            flash('Vozidlo bylo úspěšně upraveno', 'success')
-            return redirect(url_for('vozidla'))
-        except:
-            db.session.rollback()
-            flash('Chyba při ukládání změn', 'danger')
-    
-    return render_template('upravit_vozidlo.html', vozidlo=vozidlo)
+# Tato funkce je nyní přesunuta do blueprintu vozidel jako edit_vozidlo
+# @app.route('/upravit_vozidlo/<int:id>', methods=['GET', 'POST'])
+# @login_required
+# def upravit_vozidlo(id):
+#     vozidlo = Vozidlo.query.get_or_404(id)
+#     if request.method == 'POST':
+#         vozidlo.nazev = request.form['nazev']
+#         vozidlo.spz = request.form['spz']
+#         vozidlo.poznamka = request.form.get('poznamka')
+#         
+#         try:
+#             db.session.commit()
+#             flash('Vozidlo bylo úspěšně upraveno', 'success')
+#             return redirect(url_for('vozidla.vozidla'))
+#         except:
+#             db.session.rollback()
+#             flash('Chyba při ukládání změn', 'danger')
+#     
+#     return render_template('upravit_vozidlo.html', vozidlo=vozidlo)
 
 @app.route('/toggle_theme', methods=['POST'])
 @login_required
@@ -572,7 +580,7 @@ def jizdy_mesic(rok, mesic):
     aktivni_vozidlo_id = session.get('aktivni_vozidlo_id')
     if not aktivni_vozidlo_id:
         flash('Nejprve vyberte aktivní vozidlo', 'danger')
-        return redirect(url_for('vozidla'))
+        return redirect(url_for('vozidla.vozidla'))
     
     vozidlo = Vozidlo.query.get_or_404(aktivni_vozidlo_id)
     if vozidlo.user_id != current_user.id:
@@ -609,6 +617,8 @@ def inject_now():
 app.register_blueprint(export_bp)
 app.register_blueprint(statistiky_bp)
 app.register_blueprint(jizdy_bp, url_prefix='')
+from routes.vozidla import vozidla_bp
+app.register_blueprint(vozidla_bp, url_prefix='')
 
 # Error handlery
 @app.errorhandler(404)

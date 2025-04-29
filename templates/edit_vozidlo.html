@@ -5,16 +5,9 @@
     <form method="POST">
         {{ form.hidden_tag() }}
         <div class="mb-3">
-            {{ form.znacka.label }}
-            {{ form.znacka(class="form-control") }}
-            {% for error in form.znacka.errors %}
-                <span class="text-danger">{{ error }}</span>
-            {% endfor %}
-        </div>
-        <div class="mb-3">
-            {{ form.model.label }}
-            {{ form.model(class="form-control") }}
-            {% for error in form.model.errors %}
+            {{ form.nazev.label }}
+            {{ form.nazev(class="form-control") }}
+            {% for error in form.nazev.errors %}
                 <span class="text-danger">{{ error }}</span>
             {% endfor %}
         </div>
@@ -26,9 +19,9 @@
             {% endfor %}
         </div>
         <div class="mb-3">
-            {{ form.rok_vyroby.label }}
-            {{ form.rok_vyroby(class="form-control") }}
-            {% for error in form.rok_vyroby.errors %}
+            {{ form.pocatecni_stav_km.label }}
+            {{ form.pocatecni_stav_km(class="form-control") }}
+            {% for error in form.pocatecni_stav_km.errors %}
                 <span class="text-danger">{{ error }}</span>
             {% endfor %}
         </div>
