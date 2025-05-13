@@ -6,28 +6,35 @@
         {{ form.hidden_tag() }}
         <div class="mb-3">
             {{ form.nazev.label }}
-            {{ form.nazev(class="form-control") }}
+            {{ form.nazev(class="form-control", maxlength="50", style="width: 300px;") }}
             {% for error in form.nazev.errors %}
                 <span class="text-danger">{{ error }}</span>
             {% endfor %}
         </div>
         <div class="mb-3">
             {{ form.spz.label }}
-            {{ form.spz(class="form-control") }}
+            {{ form.spz(class="form-control", maxlength="20", style="width: 300px;") }}
             {% for error in form.spz.errors %}
                 <span class="text-danger">{{ error }}</span>
             {% endfor %}
         </div>
         <div class="mb-3">
+            {{ form.palivo.label }}
+            {{ form.palivo(class="form-control", maxlength="50", style="width: 300px;") }}
+            {% for error in form.palivo.errors %}
+                <span class="text-danger">{{ error }}</span>
+            {% endfor %}
+        </div>
+        <div class="mb-3">
             {{ form.pocatecni_stav_km.label }}
-            {{ form.pocatecni_stav_km(class="form-control") }}
+            {{ form.pocatecni_stav_km(class="form-control", style="width: 300px;") }}
             {% for error in form.pocatecni_stav_km.errors %}
                 <span class="text-danger">{{ error }}</span>
             {% endfor %}
         </div>
         <div class="mb-3">
             {{ form.poznamka.label }}
-            {{ form.poznamka(class="form-control") }}
+            {{ form.poznamka(class="form-control", style="width: 300px;") }}
             {% for error in form.poznamka.errors %}
                 <span class="text-danger">{{ error }}</span>
             {% endfor %}

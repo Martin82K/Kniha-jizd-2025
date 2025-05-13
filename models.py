@@ -33,6 +33,7 @@ class Vozidlo(db.Model):
     id = db.Column(Integer, primary_key=True)
     nazev = db.Column(String(100), nullable=False)
     spz = db.Column(String(20), nullable=False, unique=True)
+    palivo = db.Column(String(50), nullable=True)  # Nové pole pro typ paliva
     aktivni = db.Column(Boolean, default=True)
     vytvoreno = db.Column(DateTime, default=datetime.utcnow)
     poznamka = db.Column(Text)
