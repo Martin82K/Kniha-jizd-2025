@@ -1,7 +1,7 @@
 {% if now is not defined %}{% set now = namespace(year=2025, month=4) %}{% endif %}
 
 <!DOCTYPE html>
-<html lang="cs" data-bs-theme="{{ 'dark' if current_user.is_authenticated and current_user.dark_mode else 'dark' }}">
+<html lang="cs" data-bs-theme="{{ 'dark' if session.get('dark_mode', True) else 'light' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -49,9 +49,50 @@
             transition: color 0.2s;
         }
         .nav-link:hover, .nav-link.active {
-            background: #393e6e;
-            color: #fff !important;
+            color: #a8b2d1 !important;
         }
+        
+        /* Styly pro přepínač tématu */
+        .theme-switch {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            border-radius: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .theme-switch i {
+            font-size: 1.2rem;
+            transition: opacity 0.3s ease;
+        }
+        .theme-switch i.bi-moon {
+            color: #f8f9fa;
+        }
+        .theme-switch i.bi-sun {
+            color: #ffd43b;
+        }
+        .form-switch {
+            padding-left: 0;
+            margin: 0;
+        }
+        .form-check-input {
+            width: 3em !important;
+            height: 1.5em !important;
+            margin: 0 !important;
+            background-color: #6c757d;
+            border: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
+            cursor: pointer;
+            transition: background-color 0.3s ease, background-position 0.15s ease-in-out;
+        }
+        .form-check-input:checked {
+            background-color: #0d6efd;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
+        }
+        .form-check-input:focus {
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+        
         .btn, .btn-action {
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(67,97,238,0.10);
@@ -173,10 +214,16 @@
                 </ul>
                 <ul class="navbar-nav">
                     <li class="nav-item">
-                        <button class="btn nav-link" id="toggleTheme">
-                            <i class="bi" id="themeIcon"></i>
-                            <span id="themeText">{{ 'Světlý režim' if current_user.is_authenticated and current_user.dark_mode else 'Tmavý režim' }}</span>
-                        </button>
+                        <div class="theme-switch" 
+                             data-is-authenticated="{{ 'true' if current_user.is_authenticated else 'false' }}"
+                             data-dark-mode="{{ 'true' if current_user.is_authenticated and current_user.dark_mode else 'false' }}">
+                            <i class="bi bi-moon" id="moonIcon"></i>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="toggleTheme"
+                                    {{ 'checked' if current_user.is_authenticated and current_user.dark_mode else '' }}>
+                            </div>
+                            <i class="bi bi-sun" id="sunIcon"></i>
+                        </div>
                     </li>
                     {% if current_user.is_authenticated %}
                     <li class="nav-item dropdown">
@@ -231,18 +278,177 @@
             $('#themeText').text(currentTheme === 'dark' ? 'Světlý režim' : 'Tmavý režim');
         }
         
-        $(document).ready(function() {
-            updateThemeIcon();
+        // Funkce pro načtení stavu z cookie
+        function getThemeFromCookie() {
+            const cookies = document.cookie.split('; ');
+            const cookie = cookies.find(row => row.startsWith('dark_mode='));
+            if (cookie) {
+                return cookie.split('=')[1] === 'true';
+            }
+            return null;
+        }
+
+        // Funkce pro aktualizaci UI podle zvoleného tématu
+        function updateThemeUI(isDark) {
+            // Aktualizace ikon podle aktuálního režimu
+            if (isDark) {
+                $('#moonIcon').css('opacity', '1');
+                $('#sunIcon').css('opacity', '0.3');
+            } else {
+                $('#moonIcon').css('opacity', '0.3');
+                $('#sunIcon').css('opacity', '1');
+            }
+            // Aktualizace atributu pro celou stránku
+            $('html').attr('data-bs-theme', isDark ? 'dark' : 'light');
             
-            $('#toggleTheme').click(function() {
+            // Uložení stavu do localStorage pro rychlejší načtení příště
+            localStorage.setItem('dark_mode', isDark ? 'true' : 'false');
+            
+            // Aktualizace datového atributu pro případné další komponenty
+            var themeSwitch = document.querySelector('.theme-switch');
+            if (themeSwitch) {
+                themeSwitch.dataset.darkMode = isDark.toString();
+            }
+        }
+
+        $(document).ready(function() {
+            // Funkce pro inicializaci tématu
+            function initTheme() {
+                var isDarkMode;
+                var themeSwitch = document.querySelector('.theme-switch');
+                var isAuthenticated = themeSwitch ? themeSwitch.dataset.isAuthenticated === 'true' : false;
+                
+                // 1. Zkontrolujeme, zda máme téma v session (nastaveno serverem)
+                var htmlTheme = $('html').attr('data-bs-theme');
+                if (htmlTheme) {
+                    isDarkMode = htmlTheme === 'dark';
+                }
+                // 2. Pro přihlášené uživatele zkontrolujeme datový atribut
+                else if (isAuthenticated) {
+                    isDarkMode = themeSwitch.dataset.darkMode === 'true';
+                }
+                // 3. Jinak zkontrolujeme localStorage
+                else {
+                    var savedTheme = localStorage.getItem('dark_mode');
+                    if (savedTheme !== null) {
+                        isDarkMode = savedTheme === 'true';
+                    } 
+                    // 4. Pokud není v localStorage, zkontrolujeme cookie
+                    else {
+                        var cookieTheme = getThemeFromCookie();
+                        if (cookieTheme !== null) {
+                            isDarkMode = cookieTheme;
+                        } 
+                        // 5. Jinak použijeme výchozí hodnotu (dark mode)
+                        else {
+                            isDarkMode = true;
+                        }
+                    }
+                }
+                
+                // Aktualizujeme UI a stav přepínače
+                updateThemeUI(isDarkMode);
+                $('#toggleTheme').prop('checked', isDarkMode);
+                
+                // Uložíme do localStorage pro rychlejší načítání
+                localStorage.setItem('dark_mode', isDarkMode.toString());
+                
+                // Pro přihlášené uživatele zkontrolujeme, zda se stav shoduje se serverem
+                if (isAuthenticated) {
+                    var serverDarkMode = themeSwitch.dataset.darkMode === 'true';
+                    if (isDarkMode !== serverDarkMode) {
+                        syncThemeWithServer(isDarkMode);
+                    }
+                }
+            }
+            
+            // Funkce pro synchronizaci tématu se serverem
+            function syncThemeWithServer(isDark) {
+                try {
+                    $.ajax({
+                        url: "{{ url_for('toggle_theme') }}",
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ dark_mode: isDark }),
+                        success: function(response) {
+                            if (response.success) {
+                                console.log('Téma úspěšně aktualizováno na:', response.dark_mode ? 'tmavé' : 'světlé');
+                                // Aktualizace UI podle odpovědi ze serveru
+                                updateThemeUI(response.dark_mode);
+                                $('#toggleTheme').prop('checked', response.dark_mode);
+                            } else {
+                                console.error('Chyba při aktualizaci tématu:', response.error);
+                                // Vrátíme přepínač zpět
+                                var currentTheme = $('html').attr('data-bs-theme') === 'dark';
+                                $('#toggleTheme').prop('checked', currentTheme);
+                                updateThemeUI(currentTheme);
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Chyba při komunikaci se serverem:', error);
+                            // Vrátíme přepínač zpět
+                            var currentTheme = $('html').attr('data-bs-theme') === 'dark';
+                            $('#toggleTheme').prop('checked', currentTheme);
+                            updateThemeUI(currentTheme);
+                            
+                            // Zkusíme použít localStorage jako záložní řešení
+                            var savedTheme = localStorage.getItem('dark_mode');
+                            if (savedTheme !== null) {
+                                var isDarkMode = savedTheme === 'true';
+                                updateThemeUI(isDarkMode);
+                                $('#toggleTheme').prop('checked', isDarkMode);
+                            }
+                        }
+                    });
+                } catch (e) {
+                    console.error('Chyba při volání API:', e);
+                    // Vrátíme přepínač zpět
+                    var currentTheme = $('html').attr('data-bs-theme') === 'dark';
+                    $('#toggleTheme').prop('checked', currentTheme);
+                    updateThemeUI(currentTheme);
+                }
+            }
+            
+            // Inicializace tématu při načtení stránky
+            initTheme();
+            
+            // Posluchač změny přepínače
+            $('#toggleTheme').on('change', function() {
+                const isDark = $(this).is(':checked');
+                
+                // Okamžitá vizuální odezva
+                updateThemeUI(isDark);
+                
+                // Uložení do localStorage pro rychlejší načítání
+                localStorage.setItem('dark_mode', isDark.toString());
+                
+                // Odeslání požadavku na server
                 $.ajax({
                     url: "{{ url_for('toggle_theme') }}",
                     type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ dark_mode: isDark }),
                     success: function(response) {
                         if (response.success) {
-                            const newTheme = response.dark_mode ? 'dark' : 'light';
-                            $('html').attr('data-bs-theme', newTheme);
-                            updateThemeIcon();
+                            // Aktualizace datového atributu pro případ, že by se měl zobrazit jinde
+                            var themeSwitch = document.querySelector('.theme-switch');
+                            if (themeSwitch) {
+                                themeSwitch.dataset.darkMode = isDark.toString();
+                            }
+                        } else {
+                            console.error('Chyba při změně tématu:', response.error);
+                            // Pokud server vrátí chybu, necháme uživatele v aktuálním režimu
+                            // (už jsme aktualizovali UI, takže to necháme tak, jak to je)
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Chyba při komunikaci se serverem:', error);
+                        // V případě chyby se pokusíme obnovit z localStorage
+                        var savedTheme = localStorage.getItem('dark_mode');
+                        if (savedTheme !== null) {
+                            var isDarkMode = savedTheme === 'true';
+                            updateThemeUI(isDarkMode);
+                            $('#toggleTheme').prop('checked', isDarkMode);
                         }
                     }
                 });

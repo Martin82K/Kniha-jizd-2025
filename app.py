@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import calendar
 import os
-from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, jsonify, after_this_request
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, User, Vozidlo, Jizda, Tankovani
@@ -32,8 +32,29 @@ app.config['SESSION_PERMANENT'] = False  # Session cookie zmizí při zavření 
 # Nastavení výchozího dark mode
 @app.before_request
 def before_request():
-    if 'dark_mode' not in session:
-        session['dark_mode'] = True
+    # Pro přihlášené uživatele synchronizujeme stav s databází
+    if current_user.is_authenticated:
+        # Pokud uživatel má jiné nastavení než je v session, aktualizujeme session
+        if 'dark_mode' not in session or session['dark_mode'] != current_user.dark_mode:
+            session['dark_mode'] = current_user.dark_mode
+    else:
+        # Pro nepřihlášené uživatele zkontrolujeme cookie
+        if 'dark_mode' not in session:
+            cookie_theme = request.cookies.get('dark_mode')
+            if cookie_theme is not None:
+                session['dark_mode'] = cookie_theme.lower() == 'true'
+            else:
+                # Výchozí hodnota pro nové uživatele
+                session['dark_mode'] = True
+    
+    # Nastavíme cookie s tématem pro JavaScript
+    @after_this_request
+    def set_theme_cookie(response):
+        response.set_cookie('dark_mode', 
+                         'true' if session.get('dark_mode', True) else 'false', 
+                         max_age=60*60*24*365*2,  # Platnost 2 roky
+                         samesite='Lax')
+        return response
 
 db.init_app(app)
 migrate = Migrate(app, db)
@@ -556,12 +577,45 @@ def posledni_stav_tachometru(spz):
 #     return render_template('upravit_vozidlo.html', vozidlo=vozidlo)
 
 @app.route('/toggle_theme', methods=['POST'])
-@login_required
 def toggle_theme():
-    # Změna režimu pro přihlášeného uživatele
-    current_user.dark_mode = not current_user.dark_mode
-    db.session.commit()
-    return jsonify({'success': True, 'dark_mode': current_user.dark_mode})
+    try:
+        # Získáme požadovaný režim z požadavku
+        data = request.get_json()
+        if not data or 'dark_mode' not in data:
+            return jsonify({'success': False, 'error': 'Chybějící parametr dark_mode'})
+            
+        dark_mode = data['dark_mode']
+        
+        # Aktualizujeme session pro všechny uživatele
+        session['dark_mode'] = dark_mode
+        
+        # Pro přihlášené uživatele aktualizujeme i v databázi
+        if current_user.is_authenticated:
+            current_user.dark_mode = dark_mode
+            db.session.commit()
+        
+        # Vytvoříme odpověď s nastavením cookie
+        response = jsonify({
+            'success': True, 
+            'dark_mode': dark_mode
+        })
+        
+        # Nastavíme cookie pro JavaScript s dlouhou dobou platnosti
+        response.set_cookie(
+            'dark_mode',
+            'true' if dark_mode else 'false',
+            max_age=60*60*24*365*2,  # 2 roky
+            httponly=False,  # Musí být dostupné pro JavaScript
+            samesite='Lax'
+        )
+        
+        return response
+        
+    except Exception as e:
+        if current_user.is_authenticated:
+            db.session.rollback()
+        app.logger.error(f'Chyba při změně tématu: {str(e)}')
+        return jsonify({'success': False, 'error': 'Nepodařilo se změnit téma'})
 
 @app.route('/jizdy_mesic/<int:rok>/<int:mesic>')
 @login_required
