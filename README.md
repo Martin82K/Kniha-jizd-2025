@@ -38,9 +38,12 @@ Tento projekt slouží k evidenci jízd a správy dat souvisejících s jízdami
 
 ### Uživatelské rozhraní
 - Responzivní design
-- Podpora tmavého režimu
+- Pokročilá správa tématu (tmavý/světlý režim)
+  - Automatické ukládání uživatelského nastavení
+  - Synchronizace mezi zařízeními pro přihlášené uživatele
+  - Respektování systémového nastavení
 - Přehledné tabulky a grafy
-- Intuitivní ovládání
+- Intuitivní ovládání s okamžitou zpětnou vazbou
 
 ## Instalace
 Pro instalaci potřebných závislostí použijte následující příkaz:
